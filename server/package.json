@@ -1,0 +1,33 @@
+{
+  "name": "@rockbottom/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --ignore ../node_modules --ignore ../client --ignore ../admin src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prisma:generate:sqlite": "prisma generate --schema prisma/sqlite.prisma",
+    "prisma:generate:postgres": "prisma generate --schema prisma/postgres.prisma"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.1.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/static": "^8.2.0",
+    "@fastify/websocket": "^11.2.0",
+    "@prisma/client": "^6.14.0",
+    "@rockbottom/shared": "workspace:*",
+    "ajv": "^8.17.1",
+    "fastify": "^5.5.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@types/ws": "^8.18.1",
+    "prisma": "^6.14.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
