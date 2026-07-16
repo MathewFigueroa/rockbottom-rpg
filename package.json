@@ -1,0 +1,26 @@
+{
+  "name": "rockbottom-second-wind",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "packageManager": "pnpm@11.13.1",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "predev": "pnpm --filter @rockbottom/shared build",
+    "dev": "concurrently -k -n server,client,admin,mcp -c blue,green,yellow,magenta \"pnpm --filter @rockbottom/server dev\" \"pnpm --filter @rockbottom/client dev\" \"pnpm --filter @rockbottom/admin dev\" \"pnpm --filter @rockbottom/mcp dev\"",
+    "build": "pnpm -r --if-present build",
+    "assets": "pnpm --filter @rockbottom/assetgen generate",
+    "test": "pnpm test:unit && pnpm test:e2e",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test --grep-invert @screenshots",
+    "screenshots": "playwright test e2e/screenshots.spec.ts",
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "concurrently": "^9.2.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

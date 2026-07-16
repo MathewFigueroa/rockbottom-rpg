@@ -1,0 +1,19 @@
+packages:
+  - client
+  - server
+  - mcp
+  - admin
+  - shared
+  - tools/assetgen
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - esbuild
+  - prisma
+  - sharp
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true
+  sharp: true
