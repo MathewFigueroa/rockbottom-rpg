@@ -1,0 +1,183 @@
+{
+  "kind": "story-act",
+  "title": "Act 2: The Ladder, Streets Line",
+  "quests": [
+    {
+      "id": "regulars",
+      "name": "Regulars",
+      "summary": "Become a known, reliable face on Market Row.",
+      "stages": [
+        { "id": "three-corners", "objective": "Busk at three Market Row corners without blocking a storefront.", "dialogue": "Mara: Pick one song people can recognize before they regret stopping." },
+        { "id": "rain-route", "objective": "Deliver Mara's lunch orders during rain without opening the bags.", "choice": [{ "id": "return-wallet", "text": "Return the wallet found in an order bag.", "effect": { "grit": 12, "reputation": 15 } }, { "id": "keep-wallet", "text": "Keep $46 and drop the wallet near the transit hub.", "effect": { "cash": 46, "heat": 4, "villain": 5 } }] },
+        { "id": "regular-face", "objective": "Choose a regular pitch: music, courier work, or helping close shops.", "reward": { "perk": "Regular Face", "incomeBonus": 0.12 } }
+      ]
+    },
+    {
+      "id": "the-flip",
+      "name": "The Flip",
+      "summary": "Learn Sam's rules for buying stories and selling objects.",
+      "stages": [
+        { "id": "three-buys", "objective": "Inspect three lots and identify repair cost, provenance, and resale floor.", "dialogue": "Sam: Price is the part people say out loud. Cost is everything after." },
+        { "id": "bad-radio", "objective": "Choose whether to disclose a radio's intermittent fault before resale.", "choice": [{ "id": "disclose", "text": "Write the fault on the tag.", "effect": { "charm": 4, "samTrust": 10 } }, { "id": "hide", "text": "Sell during the five minutes it works.", "effect": { "cash": 30, "samTrust": -12 } }] },
+        { "id": "heirloom", "objective": "A seller offers an engraved silver bracelet matching a Northside burglary report.", "choice": [{ "id": "return", "text": "Ask Sam to contact the family and return it.", "dialogue": "Sam: You lose a hundred today. You keep knowing your own price.", "effect": { "grit": 30, "record": -1, "choiceTag": "heirloom-returned" } }, { "id": "fence", "text": "File off the initials and sell through Devon.", "dialogue": "Sam: Not through my counter. Whatever you decide, decide outside.", "effect": { "cash": 220, "heat": 18, "recordRisk": 0.35, "choiceTag": "heirloom-fenced" } }] }
+      ]
+    },
+    {
+      "id": "crew-up",
+      "name": "Crew Up",
+      "summary": "Learn protection, territory, alliances, and what a shared stash can cost.",
+      "stages": [
+        { "id": "camp-three", "objective": "Help Nia break up a fight at Camp Three without throwing the first hit.", "dialogue": "Nia: We sell fewer funerals than the city. That is the pitch." },
+        { "id": "tag", "objective": "Place a Riverfront Kings tag away from the memorial wall.", "effect": { "territory": "riverfront-east" } },
+        { "id": "stash", "objective": "Deposit cash or supplies into the crew stash, then vote on a withdrawal.", "choice": [{ "id": "join", "text": "Take the Kings patch and join.", "effect": { "crew": "riverfront-kings", "protection": 0.25 } }, { "id": "decline", "text": "Stay friendly and independent.", "effect": { "crewReputation": 4 } }] },
+        { "id": "rat-tutorial", "objective": "Discover that a crew crime can be reported anonymously, but evidence points both ways.", "hiddenChoice": "ratting pays $120, costs 40 crew reputation, and creates a discoverable transit-camera record" }
+      ]
+    },
+    {
+      "id": "heat-wave",
+      "name": "Heat Wave",
+      "summary": "HPD opens old reports during a citywide crackdown.",
+      "stages": [
+        { "id": "roll-call", "objective": "Learn which earlier choices generated evidence.", "dialogue": "Officer Mills: Nothing here is new. New is just when we had time to print it." },
+        { "id": "warrant", "objective": "Pay bail, call Dana, ask the crew for help, or serve the clock.", "choice": [{ "id": "bail", "text": "Pay $180 bail.", "effect": { "cash": -180 } }, { "id": "dana", "text": "Call Dana and accept a public defender.", "effect": { "grit": -5, "recordRisk": -0.15 } }, { "id": "crew", "text": "Let Nia arrange the witness problem.", "effect": { "crewDebt": 1, "villain": 10 } }, { "id": "serve", "text": "Serve 36 game hours.", "effect": { "timeHours": 36, "custodyAbsence": 1 } }] },
+        { "id": "after", "objective": "Attend court and hear the surviving counts.", "reward": { "tape": "tape-09" } }
+      ]
+    },
+    {
+      "id": "the-lookout",
+      "name": "The Lookout",
+      "summary": "A high-paying warehouse theft offers an exit ramp at every step.",
+      "stages": [
+        { "id": "ask", "objective": "Hear Nia's offer: $90 to time patrols. Walk away for no penalty." },
+        { "id": "clock", "objective": "Time three HPD passes. Quit now for $20 or continue for $140.", "exit": { "cash": 20, "heat": 0 } },
+        { "id": "door", "objective": "The crew asks you to hold a cloned access badge. Quit now for $60 and 4 heat.", "exit": { "cash": 60, "heat": 4 } },
+        { "id": "inside", "objective": "A night guard arrives early. Warn the crew, misdirect the guard, or leave.", "choice": [{ "id": "warn", "text": "Warn the crew and stay visible.", "effect": { "cash": 190, "heat": 16 } }, { "id": "misdirect", "text": "Send the guard toward an occupied camp.", "effect": { "cash": 240, "villain": 16, "heat": 8 } }, { "id": "leave", "text": "Walk away before the door opens.", "effect": { "cash": 70, "crewReputation": -6 } }] },
+        { "id": "bust", "objective": "HPD closes both exits. Drop the badge and walk toward Mills for reduced pay and no chase, or run with the crew.", "choice": [{ "id": "walk", "text": "Walk out, hands visible.", "effect": { "cash": 70, "recordRisk": 0.2, "choiceTag": "lookout-walked" } }, { "id": "run", "text": "Run through the freight cut.", "effect": { "cash": 300, "heat": 35, "recordRisk": 0.65, "choiceTag": "lookout-ran" } }] }
+      ]
+    },
+    {
+      "id": "day-thirty",
+      "name": "Day Thirty",
+      "summary": "The first custody hearing turns a month of choices into five numbers.",
+      "stages": [
+        { "id": "prepare", "objective": "Review housing, income, record, sobriety, and visitation evidence with Dana." },
+        { "id": "hearing", "objective": "Answer Judge Whitfield without promising what the file cannot support.", "dialogue": "custody-hearing" },
+        { "id": "order", "objective": "Receive supervised, unsupervised, weekend, or shared-custody progression.", "weights": { "housing": 30, "income": 25, "record": 20, "sobriety": 15, "visitation": 10 } }
+      ]
+    },
+    {
+      "id": "old-friends",
+      "name": "Old Friends",
+      "summary": "Marcus arrives with a good memory, a bad plan, and no cartoon horns.",
+      "stages": [
+        { "id": "payday", "objective": "Answer Marcus's invitation after a paid Friday shift.", "dialogue": "marcus-payday" },
+        { "id": "rooftop", "objective": "If accepted, play through a genuinely fun night before consequences roll.", "effect": { "morale": 45, "sobrietyReset": true, "cashPercentLoss": [35, 90], "risk": ["robbed", "jail", "missed-curfew"] } },
+        { "id": "morning", "objective": "Tell Dana the truth, conceal the relapse, or restart the streak without explanation.", "choice": [{ "id": "truth", "text": "Tell Dana before the test.", "effect": { "grit": 8, "danaTrust": 12 } }, { "id": "conceal", "text": "Use a borrowed sample.", "effect": { "villain": 8, "recordRisk": 0.15 } }, { "id": "quiet", "text": "Start again and say nothing.", "effect": { "grit": 0 } }] }
+      ]
+    },
+    {
+      "id": "keys",
+      "name": "Keys",
+      "summary": "Build enough boring income for an SRO and a first unsupervised park visit.",
+      "stages": [
+        { "id": "deposit", "objective": "Save $270 without missing three consecutive rent-proof weeks." },
+        { "id": "inspection", "objective": "Inspect Room 306 and record the broken latch before signing." },
+        { "id": "key", "objective": "Pay the deposit and take the SRO key.", "effect": { "housing": "sro", "item": "sro-key" } },
+        { "id": "park-one", "objective": "Meet {{childName}} at Maple Park without Dana in the same room.", "dialogue": "park-visitation-one" },
+        { "id": "park-later", "objective": "Complete later visits that remember the returned wallet, heirloom, crew membership, relapse honesty, and blue crayon.", "dialogue": "park-visitation-callbacks" }
+      ]
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "marcus-payday",
+      "speaker": "Marcus Hale",
+      "nodes": [
+        { "id": "start", "text": "There you are. I had to ask three responsible people. Terrible afternoon.", "choices": [{ "text": "I'm working early.", "next": "early" }, { "text": "What do you want?", "next": "want" }, { "text": "You look good, Marcus.", "next": "good" }] },
+        { "id": "good", "text": "Lighting. Never trust a man standing under a pharmacy sign.", "choices": [{ "text": "Still. Good to see you.", "next": "want" }] },
+        { "id": "want", "text": "Rooftop at Taz's. Six people you know, two you like, music from when our knees worked. Come for one hour. Leave with your wallet and your new personality.", "choices": [{ "text": "I don't do one hour.", "next": "know" }, { "text": "One hour.", "next": "accept" }, { "text": "No.", "next": "decline" }] },
+        { "id": "early", "text": "So did we, once. We were very ambitious around dawn.", "choices": [{ "text": "That's why I'm saying no.", "next": "decline" }, { "text": "One hour, then.", "next": "accept" }] },
+        { "id": "know", "text": "I know. Neither do I. That's why I miss you. You made bad timing feel like a talent.", "choices": [{ "text": "I miss that too.", "next": "soft" }, { "text": "I have a kid waiting on the other side of this month.", "next": "kid" }] },
+        { "id": "soft", "text": "Then come remember it without making a religion out of it.", "choices": [{ "text": "Go to the roof.", "next": "accept" }, { "text": "Walk me to the bus instead.", "next": "bus" }] },
+        { "id": "kid", "text": "Right. {{childName}}. I won't pretend I outrank that. I can still hate the answer.", "choices": [{ "text": "You can.", "next": "decline" }] },
+        { "id": "bus", "text": "You got cruel when you got healthy.", "stage": "He walks you to the bus. At the curb he tells the story about the motel ice machine. You laugh hard enough to miss the first bus and take the second sober.", "effect": { "morale": 15, "grit": 8 }, "end": true },
+        { "id": "accept", "text": "One hour. A famous unit of time with no legal definition.", "effect": { "trigger": "relapse-night" }, "end": true },
+        { "id": "decline", "text": "Okay. Mean it before I make another joke. Call me on a Tuesday when neither of us has money.", "effect": { "sobriety": 1, "morale": -3, "grit": 6 }, "end": true }
+      ]
+    },
+    {
+      "id": "custody-hearing",
+      "speaker": "Judge Evelyn Whitfield",
+      "nodes": [
+        { "id": "open", "text": "This court is reviewing progress, not character. Character is too large for a Tuesday docket.", "choices": [{ "text": "Understood, Your Honor.", "next": "housing" }, { "text": "The file misses things.", "next": "file" }] },
+        { "id": "file", "text": "It does. It also remembers things people prefer to edit. We will use it carefully.", "choices": [{ "text": "Understood.", "next": "housing" }] },
+        { "id": "housing", "variants": { "pass": "The SRO provides a fixed address and a private door. That is meaningful progress.", "fail": "The shelter bed shows routine, but it is not yet a home where a child can stay." }, "choices": [{ "text": "Continue.", "next": "income" }] },
+        { "id": "income", "variants": { "pass": "Verified deposits appear in three of four weeks. Boring money is persuasive money.", "fail": "Total earnings are not the issue. The gaps are. Children cannot budget around luck." }, "choices": [{ "text": "Continue.", "next": "record" }] },
+        { "id": "record", "variants": { "pass": "No new charges were filed. The court notes several encounters and no escalation.", "fail": "The new charge does not vanish because the underlying week was difficult. It weighs twenty percent." }, "choices": [{ "text": "Continue.", "next": "sobriety" }] },
+        { "id": "sobriety", "variants": { "pass": "The documented streak has reached thirty days. The court recognizes both the number and the work inside it.", "fail": "The streak restarted. A restart is not nothing, but it is not the prior number." }, "choices": [{ "text": "Continue.", "next": "visits" }] },
+        { "id": "visits", "variants": { "pass": "Every scheduled visit was attended on time.", "fail": "One or more visits were missed. The reason is in the record; the absence remains in the child's week." }, "choices": [{ "text": "What is the order?", "next": "order" }] },
+        { "id": "order", "variants": { "supervised": "Supervised contact continues. The next review is in thirty days.", "unsupervised": "Contact advances to unsupervised daytime visits in a public setting.", "weekends": "The court authorizes alternating weekend contact once suitable sleeping space is documented.", "shared": "The court adopts the shared-custody schedule. This is an order, not a finish line." }, "end": true }
+      ]
+    },
+    {
+      "id": "park-visitation-one",
+      "speaker": "{{childName}}",
+      "nodes": [
+        { "id": "start", "text": "Dana isn't coming?",
+          "choices": [{ "text": "She's nearby if we need her, but it's us today.", "next": "okay" }, { "text": "We earned some room.", "next": "earned" }] },
+        { "id": "earned", "text": "Did I earn it too?",
+          "choices": [{ "text": "You never had to.", "next": "okay" }] },
+        { "id": "okay", "text": "Okay. Grandma packed two sandwiches because she thinks parks erase food.", "choices": [{ "text": "What kind?", "next": "sandwich" }, { "text": "I brought the blue crayon.", "next": "blue" }] },
+        { "id": "blue", "text": "You really kept it.", "stage": "The surprise is small, which makes it honest.", "choices": [{ "text": "I said I would.", "next": "sandwich" }] },
+        { "id": "sandwich", "text": "Peanut butter. Cut wrong, but still edible.", "choices": [{ "text": "Wrong how?", "next": "diagonal" }, { "text": "We can file a complaint.", "next": "laugh" }] },
+        { "id": "diagonal", "text": "Triangles taste better. Everybody knows.", "choices": [{ "text": "I had forgotten the law.", "next": "laugh" }] },
+        { "id": "laugh", "text": "You forgot a lot of stuff.", "stage": "Then they laugh, not to soften it. You split the sandwich diagonally with the edge of a napkin.", "end": true }
+      ]
+    },
+    {
+      "id": "park-visitation-callbacks",
+      "speaker": "{{childName}}",
+      "nodes": [
+        { "id": "start", "variants": { "heirloom-returned": "Sam told Grandma about the bracelet. She said you did one thing the hard way.", "heirloom-fenced": "A police lady asked Grandma about a silver bracelet. She stopped talking when I came in.", "default": "Sam says you know how to tell when things are worth fixing." }, "choices": [{ "text": "Some things.", "next": "trust" }, { "text": "I'm learning.", "next": "trust" }] },
+        { "id": "trust", "variants": { "relapse-honest": "Dana said grown-ups can tell the truth late and it still counts, just less.", "relapse-hidden": "Grandma says the dates moved again. She didn't say why.", "wallet-returned": "The diner lady gave me free pie because you returned somebody's wallet. I think the pie was old.", "crew-member": "Are the people by the river your friends, or do they work for you?" }, "choices": [{ "text": "Tell the truth in words a child can use.", "next": "routine" }, { "text": "Ask what they think.", "next": "routine" }] },
+        { "id": "routine", "text": "Can we do the sandwich thing again next time? The napkin knife worked.", "stage": "It is the first time they have asked for the next visit without looking at a schedule.", "choices": [{ "text": "Same bench, same triangles.", "next": "end" }, { "text": "We can improve the knife.", "next": "end" }] },
+        { "id": "end", "text": "Don't improve it too much.", "end": true }
+      ]
+    }
+  ],
+  "events": [
+    { "id": "temptation-payday", "trigger": "cash earned this day >= 100", "cooldownDays": 14, "dialogue": "marcus-payday" },
+    { "id": "temptation-failure", "trigger": "quest failed and morale < 35", "choice": ["call Marcus", "call Dana", "sleep", "walk the river"] },
+    { "id": "relapse-night", "scenes": ["A rooftop speaker plays the song Marcus promised.", "For two hours, every old joke still fits.", "You buy the second round because the first hour has already changed its name.", "Morning chooses among a holding cell, an empty wallet, or the Route 9 concrete."], "effect": { "morale": 45, "sobrietyDays": 0, "cashLossPercent": [35, 90] } },
+    { "id": "sobriety-seven", "atDays": 7, "grit": 12 },
+    { "id": "sobriety-thirty", "atDays": 30, "grit": 30 },
+    { "id": "sobriety-sixty", "atDays": 60, "grit": 55 },
+    { "id": "sobriety-ninety", "atDays": 90, "grit": 90 }
+  ],
+  "tapes": [
+    { "id": "tape-01", "name": "Microcassette: Route 9", "location": "underpass pillar cavity", "content": "SAM OKAFOR, INTERVIEW 1. Traffic is audible for eleven seconds before he speaks. He says the parent slept under Route 9 because the eastern pillar stayed dry in weather from the west. He says they kept a photograph inside the coat, then corrects himself: they would have kept it there. The correction is not explained. A bus brakes overhead. Sam asks whether the recorder is still running." },
+    { "id": "tape-02", "name": "Returned Letter: April 6", "location": "Mercy House mail cubby", "content": "RETURN TO SENDER, NO FORWARDING ADDRESS. The envelope was addressed to {{childName}} in careful block letters. Inside: 'I learned the number of your bus but I will not wait near it. Dana says surprises are for birthdays, not custody plans. I worked Tuesday and Thursday. I am learning to make facts instead of promises. The blue crayon is in my locker.' The signature was written twice; the first was crossed out." },
+    { "id": "tape-03", "name": "Pawn Ticket 1187", "location": "Sam's back counter", "content": "OKAFOR PAWN & REPAIR. Item: brass table lamp, switch repaired. Purchase price: $12. Seller identification: temporary shelter card. Notes in Sam's handwriting: 'Paid twelve, not six. Tested before claiming. Came back the next day to ask why.' Beneath it, in different ink and much later: 'This is where I began the story when the child asked whether they ever finished anything.'" },
+    { "id": "tape-04", "name": "Intake Carbon Copy", "location": "Dana's file cabinet", "content": "MERCY HOUSE INTAKE, BED C-14. Goals stated by resident: work, shower, see child. Goal crossed out by resident: fix everything. Caseworker note: 'Client arrived 17 minutes early and apologized for being early. Carries four dollars and a damaged family photograph. No promises were requested. Seven-night stability plan explained.' A later annotation says the window latch was repaired with folded paper, as Lena had advised." },
+    { "id": "tape-05", "name": "Diner Order Pad", "location": "Mara's register", "content": "HALF PLATE, COFFEE, OWES $2. The debt is marked paid with a line so hard the pencil tore the paper. On the back, Mara wrote a phone number for the day-labor lot and the words 'do not call after six, Gus turns into a pumpkin with union opinions.' The page had been saved for reasons Mara could not remember in the interview." },
+    { "id": "tape-06", "name": "Family Center Sign-in", "location": "neutral-site lobby", "content": "VISITOR: {{playerName}}. Arrival 2:31 PM for 3:00 PM appointment. Items brought: one creased photograph, no food, no gifts. Child departed 4:32 PM. One blue crayon remained in the visitation room and was taken by the visitor after staff confirmed it was not facility property. Staff observation: 'Long silences tolerated without prompting.'" },
+    { "id": "tape-07", "name": "Voicemail Export: Marcus", "location": "prepaid phone archive", "content": "Marcus laughs before the message begins. 'Tuesday, like I promised. Nobody has money. Call me back and we can be miserable for free.' There is wind and a passing train. Then, quieter: 'You were right about the roof. I hated you for making me walk to the bus. Still kind of do.' The export date is nine years after the phone account closed." },
+    { "id": "tape-08", "name": "Courier Receipt Bundle", "location": "Market Row notice board", "content": "Eleven delivery receipts, all signed within their quoted windows. The fourth includes a returned wallet with $46 listed and counted by Mara Velasquez. If the wallet was kept, the receipt instead carries a police property number and the words 'cash missing.' Both versions were described in interviews; only one was in the box. The compiler has placed it face down." },
+    { "id": "tape-09", "name": "Court Transcript: Heat Wave", "location": "HPD property window", "content": "THE COURT: You understand this proceeding concerns the warehouse report? DEFENDANT: I understand it concerns what can be proved about the warehouse report. THE COURT: That answer suggests somebody has been giving you advice. DEFENDANT: Somebody has. A pause is noted but not timed. The next page is absent. On the copy, Dana wrote: 'Careful is not the same as dishonest. Do not confuse them for the client.'" },
+    { "id": "tape-10", "name": "Silver Bracelet Photograph", "location": "Northside evidence locker", "content": "An evidence photograph shows a silver bracelet engraved E.M. 1954. In one account, it was returned to Eleanor Morrow, who described the parent as 'the woman from the pawn shop who would not come inside for thanks.' In another, the initials were removed and the silver sold by weight. Sam remembers only one version. At this point in the interview, he asked the adult child which version they needed." },
+    { "id": "tape-11", "name": "Crew Stash Ledger", "location": "Camp Three lockbox", "content": "RIVERFRONT KINGS SHARED: canned food 18, socks 11 pairs, cash $604, bike tubes 3. Beside {{playerName}}: deposit $35; withdrawal $0; two night watches; one dispute settled. A page has been cut out cleanly after the warehouse entry. Nia said the missing page named a rat. Junebug said the page only held a grocery list. Both statements were recorded on the same afternoon." },
+    { "id": "tape-12", "name": "SRO Inspection Sheet", "location": "Room 306 radiator", "content": "ROOM 306: latch loose, radiator knocks, hot water intermittent. Tenant recorded all three before signing. Landlord initialed only the latch. In the margin: 'Space for one bed. Space for a second toothbrush eventually.' The phrase matches Judge Whitfield's later order, though the inspection predates the hearing. The adult child underlined this twice and wrote: 'Did Dana give them the words, or did I?'" },
+    { "id": "tape-13", "name": "Basic Training Postcard", "location": "transit depot dead-letter case", "content": "A postcard from Fort Halvern shows a parade field without people. 'Vance says a made bed is not a personality. Mine is getting close. Petty snores like a truck considering a difficult hill. Dominguez has taught me to fold sleeves and distrust powdered eggs. Pay starts Friday. I put your name on the allotment line.' The card was never mailed; it bears no stamp." },
+    { "id": "tape-14", "name": "Aptitude Score Sheet", "location": "recruitment center archive", "content": "HALVERN APTITUDE BATTERY. Mechanical: 78. Verbal: 84. Spatial: 61. Arithmetic: 73. Recruiter note: 'Candidate erased correct answers twice, then restored them. Requested exact deployment language before signing.' Dana attached a yellow note: 'Asked the right question. I am not sure there was a right answer.' The adult child later circled the allotment eligibility box." },
+    { "id": "tape-15", "name": "Allotment Authorization", "location": "Fort finance office", "content": "IRREVOCABLE VOLUNTARY ALLOTMENT: 28 percent of base pay to guardian account for {{childName}}. The adjective voluntary is printed; irrevocable was added by hand at the service member's request. Finance clerk notation: 'Explained that future hardship would not pause transfer. Member said that was the point.' In custody calculations this page eventually carried more weight than any medal." },
+    { "id": "tape-16", "name": "Supply Convoy Audio", "location": "deployment staging locker", "content": "DOMINGUEZ: If that crate falls again, I am listing it as hostile action. PETTY: Against gravity? DOMINGUEZ: Gravity has priors. The parent laughs off-mic. Later they say, 'When we stop, wake me before the decision.' The recording continues with road noise for forty-three minutes. No one speaks. This was labeled an uneventful deployment and kept anyway." },
+    { "id": "tape-17", "name": "Promotion Declination", "location": "Fort personnel file", "content": "Member declines deployment rotation 4B. Consequences acknowledged: loss of promotion standing, loss of 15 GRIT equivalent, standard pay retained. Reason line: 'Custody hearing occurs during rotation. Presence may count less than service, but absence has already counted enough.' The commander signed without comment. In Sam's interview he called this brave, then asked that the adjective be removed." },
+    { "id": "tape-18", "name": "After-Action Page", "location": "Fort memorial archive", "content": "CONTACT AT 14:22. Vehicle three disabled. Petty moved left on instruction; Dominguez maintained cover. The member chose to return for the driver rather than secure the cargo. Casualty fields are redacted on the surviving copy. At 15:07 the member asked twice who had called the turn. The answer is absent. A coffee ring covers the signature block." },
+    { "id": "tape-19", "name": "Remote Hearing Transcript", "location": "courthouse digital kiosk", "content": "JUDGE WHITFIELD: Service is evidence of stability and a cause of absence. Both can be true. MEMBER: The pay goes home when I do not. JUDGE: Money is not presence. MEMBER: No, ma'am. But it is not nothing. The video freezes for six seconds. When it returns, the member is looking to the left, where someone outside frame had spoken." },
+    { "id": "tape-20", "name": "Returned Letter: No Date", "location": "box beneath the adult child's table", "content": "The letter begins in the middle: '...not asking you to understand the Army. I did not understand it while I was in it. I understood Friday pay, the voucher, and the odds they showed in a clean little box. I understood your shoes cost money. Some days that was the whole map.' The first page has not been found. The final line says: 'Sam knows the parts I stopped telling straight.'" },
+    { "id": "tape-21", "name": "Service Ribbon", "location": "Sam's pawn safe", "content": "A muted green service ribbon in a pawn envelope marked NOT FOR SALE. Sam says it was left as collateral for twenty dollars and reclaimed the next morning without the money. His ledger has no matching loan. When asked why he kept the envelope, he says paper remembers the shape of an object even when the object leaves. The adult child places the ribbon inside it anyway." },
+    { "id": "tape-22", "name": "Dana Reyes Interview", "location": "oral-history archive", "content": "Dana says the parent disliked the percentages because percentages looked final. She explains the custody formula, then stops midway through housing. 'They were not a score,' she says. 'The score was a tool I used because court needed one. Do not rebuild a person out of my tool.' The adult child asks whether forgiveness was ever in the plan. Dana answers, 'Not as a requirement.'" },
+    { "id": "tape-23", "name": "Sam Okafor Interview: Last", "location": "kitchen table tape box", "content": "Sam says every job he gave the parent has become cleaner in the telling. The lamp probably cost six, not five. The warehouse warning may have come later. He cannot remember which winter held the bracelet. 'Memory pays cash for a good ending,' he says. 'Your job is to check the serial number.' A chair scrapes. The adult child asks him to stay for one more tape." },
+    { "id": "tape-24", "name": "The Photograph, Reverse", "location": "unlocked after final resolution", "content": "The back of the creased photograph contains no message from the parent. In adult handwriting, written decades later: 'I was looking at Grandma, not at you. You took three pictures because your thumb covered the first two. I did not remember that until Sam described the coat.' The photograph had always been evidence from both sides. The crease crosses the parent's hand and the child's untied shoe." }
+  ]
+}

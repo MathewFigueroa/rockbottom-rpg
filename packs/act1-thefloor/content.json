@@ -1,0 +1,120 @@
+{
+  "kind": "story-act",
+  "title": "Act 1: The Floor",
+  "quests": [
+    {
+      "id": "the-floor",
+      "name": "The Floor",
+      "summary": "Wake under Route 9, recover a routine, and earn a first supervised visit.",
+      "steps": [
+        { "id": "wake", "objective": "Stand up and check your coat.", "scene": "overpass-wake", "reward": { "item": "creased-photo" } },
+        { "id": "first-fifty", "objective": "Earn $50 through recycling, day labor, busking, or Sam's first flip.", "tutorials": ["needs", "map", "recycling", "diner", "day-labor"] },
+        { "id": "bed", "objective": "Show Dana $50 in working cash and claim a shelter bed before curfew.", "scene": "dana-intake" },
+        { "id": "streak", "objective": "Keep the bed seven consecutive days and complete four work shifts.", "failure": "A missed curfew resets only the bed streak, never story progress." },
+        { "id": "visit", "objective": "Attend supervised visitation at the Halvern Family Center.", "scene": "first-visitation" },
+        { "id": "ladder", "objective": "Hear Dana's custody plan and unlock the streets and Army lines.", "scene": "dana-ladder" }
+      ]
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "overpass-wake",
+      "speaker": "Narration",
+      "nodes": [
+        { "id": "start", "text": "Dawn arrives as tire noise before it arrives as light. Your shoulder has taken the shape of a concrete seam. Something stiff presses against your ribs inside the coat.", "choices": [{ "text": "Check the coat.", "next": "photo" }, { "text": "Count what you have first.", "next": "pockets" }] },
+        { "id": "pockets", "text": "Four dollars, a bus transfer dated yesterday, one clean sock. The stiff thing is still there.", "choices": [{ "text": "Check it.", "next": "photo" }] },
+        { "id": "photo", "text": "The photo survived the rain. {{childName}} is laughing at somebody outside the frame. One shoe is untied. You remember taking it. You do not remember what happened after.", "choices": [{ "text": "Put it back carefully.", "next": "stand" }, { "text": "Look a little longer.", "next": "longer" }] },
+        { "id": "longer", "text": "The crease crosses your own hand at the edge of the picture. Your hand had been steady then.", "choices": [{ "text": "Stand up.", "next": "stand" }] },
+        { "id": "stand", "text": "A shopping cart with two good wheels waits beside the pillar. The recycling center opens at six. Mara's Diner is already lit.", "end": true }
+      ]
+    },
+    {
+      "id": "mara-first-meal",
+      "speaker": "Mara Velasquez",
+      "nodes": [
+        { "id": "start", "text": "You look like the bridge charged rent.", "choices": [{ "text": "Coffee. Just coffee.", "next": "coffee" }, { "text": "What can four dollars buy?", "next": "four" }, { "text": "I'm looking for work.", "next": "work" }] },
+        { "id": "coffee", "text": "Two dollars. The refill is me pretending not to notice.", "effect": { "energy": 10 }, "choices": [{ "text": "Thanks.", "next": "close" }] },
+        { "id": "four", "text": "Half a plate now, other half when you come back with pay. Don't make it a tradition.", "effect": { "hunger": 24, "debt": 2 }, "choices": [{ "text": "Deal.", "next": "close" }, { "text": "Keep it. Where is the recycling center?", "next": "recycle" }] },
+        { "id": "work", "text": "Gus picks crews at the Industrial lot at seven. Show early. He respects clocks more than people.", "choices": [{ "text": "And recycling?", "next": "recycle" }, { "text": "I'll be there.", "next": "close" }] },
+        { "id": "recycle", "text": "Follow the river east until the smell changes from water to hot metal. Cart by the Route 9 pillar is nobody's until somebody pushes it.", "choices": [{ "text": "Got it.", "next": "close" }] },
+        { "id": "close", "text": "Eat with both feet under you. Makes the day less likely to steal the chair.", "end": true }
+      ]
+    },
+    {
+      "id": "sam-first-flip",
+      "speaker": "Sam Okafor",
+      "nodes": [
+        { "id": "start", "text": "You're blocking my light. Either come in or become architecture.", "choices": [{ "text": "Mara said you buy found things.", "next": "found" }, { "text": "I need work.", "next": "work" }, { "text": "You served?", "next": "served" }] },
+        { "id": "found", "text": "Mara says found when she means wet. I buy legal things with serial numbers still attached.", "choices": [{ "text": "What counts as legal?", "next": "legal" }, { "text": "I can learn.", "next": "work" }] },
+        { "id": "legal", "text": "A receipt. A believable owner. Nothing with a child's name written on it. Standards get expensive only after you lose them.", "choices": [{ "text": "Give me a test.", "next": "lamp" }] },
+        { "id": "work", "text": "Everybody needs work. I need the brass lamp from Nell's yard table on Carver. She wants five. The switch sticks. Make it not stick. Bring it here.", "choices": [{ "text": "What will you pay?", "next": "price" }, { "text": "Why not go yourself?", "next": "why" }] },
+        { "id": "lamp", "text": "Brass lamp. Carver Street. Buy five, clean the switch, sell twelve. Seven dollars is small enough to teach you without lying.", "choices": [{ "text": "I'll bring it back.", "next": "close" }] },
+        { "id": "price", "text": "Twelve if it works. Six if you tell me it works before I test it.", "choices": [{ "text": "Fair.", "next": "close" }, { "text": "Ten now.", "next": "advance" }] },
+        { "id": "advance", "text": "No. That was the whole lesson, delivered free.", "choices": [{ "text": "Worth asking.", "next": "close" }] },
+        { "id": "why", "text": "Because she will charge me twenty and call it veterans helping veterans. You she might charge four out of pity. Let her keep the dignity and pay five.", "choices": [{ "text": "Understood.", "next": "close" }] },
+        { "id": "served", "text": "Long enough to stop putting it first in a sentence. If you're thinking recruitment, think past the photograph at the desk.", "choices": [{ "text": "I'm not thinking that far.", "next": "work" }, { "text": "What photograph?", "next": "photo" }] },
+        { "id": "photo", "text": "The one where everybody came home. Now, lamp or doorway?",
+          "choices": [{ "text": "Lamp.", "next": "lamp" }] },
+        { "id": "close", "text": "Check it twice. Trust the second look.", "end": true }
+      ]
+    },
+    {
+      "id": "dana-intake",
+      "speaker": "Dana Reyes",
+      "nodes": [
+        { "id": "start", "text": "Name for the bed list. The legal one, even if you don't like it today.", "choices": [{ "text": "{{playerName}}.", "next": "child" }, { "text": "How much is the bed?", "next": "cost" }] },
+        { "id": "cost", "text": "No cash. Curfew at ten, chore at six, no using on the property. The fifty is not for us. I need to know one missed meal will not send you running at midnight.", "choices": [{ "text": "My name is {{playerName}}.", "next": "child" }] },
+        { "id": "child", "text": "Your intake mentions a child. Do you want their name used in the plan?",
+          "choices": [{ "text": "Yes. {{childName}}.", "next": "truth" }, { "text": "Not yet.", "next": "notyet" }] },
+        { "id": "notyet", "text": "Then I write child and leave room. Room matters.", "choices": [{ "text": "Write {{childName}}.", "next": "truth" }, { "text": "Leave it for today.", "next": "truth" }] },
+        { "id": "truth", "text": "I can get you a supervised visit after seven nights in the same bed and four verified shifts. I cannot get you a second first impression. Be early.", "choices": [{ "text": "Will they come?", "next": "come" }, { "text": "Seven nights. Four shifts.", "next": "tag" }] },
+        { "id": "come", "text": "The guardian agreed to ninety minutes. That is what I know. Don't spend the week inventing the rest.", "choices": [{ "text": "Okay.", "next": "tag" }] },
+        { "id": "tag", "text": "C-14. Window rattles. Fold this intake copy into the latch.", "effect": { "housing": "shelter", "bed": "C-14" }, "end": true }
+      ]
+    },
+    {
+      "id": "first-visitation",
+      "speaker": "{{childName}}",
+      "nodes": [
+        { "id": "start", "stage": "A family-center room. Two plastic chairs, a low table, a clock with a loud second hand. Dana sits by the door with a closed folder.", "text": "Hi.", "choices": [{ "text": "Hi, {{childName}}.", "next": "bag" }, { "text": "You got taller.", "next": "taller" }, { "text": "I brought your picture.", "next": "picture" }] },
+        { "id": "taller", "text": "I think that's what happens.", "stage": "They keep both straps of the backpack on.", "choices": [{ "text": "Yeah. It is.", "next": "bag" }] },
+        { "id": "picture", "text": "I know that one. Grandma has it on her fridge, but not bent.", "choices": [{ "text": "Mine traveled.", "next": "smallsmile" }, { "text": "I've kept it safe.", "next": "bag" }] },
+        { "id": "smallsmile", "text": "It looks like it.", "stage": "Almost a smile. The backpack comes off one shoulder.", "choices": [{ "text": "How is school?", "next": "school" }] },
+        { "id": "bag", "text": "Do I put my bag here or are we going somewhere?",
+          "choices": [{ "text": "Here is good. We can draw.", "next": "draw" }, { "text": "We're staying in this room today.", "next": "room" }] },
+        { "id": "room", "text": "Oh. Grandma said maybe the park.", "choices": [{ "text": "Maybe next time.", "next": "draw" }, { "text": "I should have explained.", "next": "draw" }] },
+        { "id": "school", "text": "Fine. We have fractions. I already knew halves.", "choices": [{ "text": "You used to split pancakes exactly down the middle.", "next": "pancakes" }, { "text": "Fractions get worse before they get better.", "next": "draw" }] },
+        { "id": "pancakes", "text": "I don't remember that.", "stage": "They say it without cruelty. They pick a blue crayon.", "choices": [{ "text": "That's okay.", "next": "draw" }, { "text": "I do.", "next": "draw" }] },
+        { "id": "draw", "text": "What do you want me to draw?",
+          "choices": [{ "text": "Your favorite place.", "next": "favorite" }, { "text": "Whatever you want.", "next": "whatever" }, { "text": "A house.", "next": "house" }] },
+        { "id": "house", "text": "Whose?",
+          "choices": [{ "text": "Any house.", "next": "favorite" }, { "text": "Ours someday.", "next": "pause" }] },
+        { "id": "pause", "text": "Okay.", "stage": "The crayon stops for one second. Dana looks at the closed folder, not at you.", "choices": [{ "text": "Your favorite place is better.", "next": "favorite" }] },
+        { "id": "whatever", "text": "That's not an idea.", "choices": [{ "text": "Fair. Your favorite place.", "next": "favorite" }] },
+        { "id": "favorite", "text": "The library has a window seat. Grandma lets me read past dinner if it's raining.", "stage": "The drawing is the window first, then the rain, then a small person inside. When the clock beeps, the blue crayon remains on your side of the table.", "choices": [{ "text": "You left your blue.", "next": "blue" }, { "text": "Can I see you again?", "next": "again" }] },
+        { "id": "blue", "text": "You can keep it. There are more in the box.", "choices": [{ "text": "I'll bring it next time.", "next": "end" }] },
+        { "id": "again", "text": "Dana knows the schedule.", "stage": "They look toward Dana, then back at you.", "choices": [{ "text": "I'll ask Dana.", "next": "end" }] },
+        { "id": "end", "text": "Bye.", "stage": "At the door, they lift one hand. Not a wave exactly. Enough to answer.", "effect": { "item": "child-crayon", "visitationAttendance": 100 }, "end": true }
+      ]
+    },
+    {
+      "id": "dana-ladder",
+      "speaker": "Dana Reyes",
+      "nodes": [
+        { "id": "start", "text": "You showed up. That matters, so I am going to tell you what matters next without making it pretty.", "choices": [{ "text": "Go ahead.", "next": "factors" }, { "text": "How did the visit look?", "next": "visit" }] },
+        { "id": "visit", "text": "Like a first visit. {{childName}} watched the door less by the end. Don't turn that into more than it is or less than it is.", "choices": [{ "text": "What's next?", "next": "factors" }] },
+        { "id": "factors", "text": "Housing is thirty percent. Income twenty-five. Record twenty. Sobriety fifteen. Showing up ten. The judge sees a life as arithmetic because arithmetic fits in a file.", "choices": [{ "text": "What counts as housing?", "next": "housing" }, { "text": "What counts as income?", "next": "income" }, { "text": "And the Army?", "next": "army" }] },
+        { "id": "housing", "text": "A shelter proves routine. An SRO proves a door. A two-bedroom gives the court somewhere to put a second toothbrush.", "choices": [{ "text": "Income?", "next": "income" }, { "text": "Army?", "next": "army" }] },
+        { "id": "income", "text": "Not one big week. The court likes boring money. Four shifts, then four more. Pay stubs beat promises every time.", "choices": [{ "text": "Army?", "next": "army" }, { "text": "I can keep working the street jobs.", "next": "streets" }] },
+        { "id": "army", "text": "Guaranteed pay, a possible voucher, and a real chance you are not here for the next hearing. Deployment complicates custody. Death ends the question. Recruitment will not put that on the poster.", "choices": [{ "text": "It may still be the cleanest road.", "next": "split" }, { "text": "Then I stay here and build.", "next": "split" }] },
+        { "id": "streets", "text": "Then build slowly. Sam has work. Nia has faster work. Both roads leave receipts, even when nobody hands you one.", "choices": [{ "text": "I understand.", "next": "split" }] },
+        { "id": "split", "text": "You can change paths. Life is not a class selection screen. The hearing is in thirty days either way.", "effect": { "act": 2, "unlock": ["act2-streets", "act2-army"] }, "end": true }
+      ]
+    }
+  ],
+  "events": [
+    { "id": "shelter-curfew", "schedule": "daily 22:00", "condition": "housing=shelter and outside", "effect": "reset shelter streak and sleep outside" },
+    { "id": "labor-call", "schedule": "weekdays 06:45", "condition": "at day-labor lot", "effect": "reserve shift slot" },
+    { "id": "dawn-reset", "schedule": "daily 05:30", "effect": "update district lighting and job windows" }
+  ]
+}

@@ -1,0 +1,188 @@
+{
+  "kind": "story-act",
+  "title": "Act 2: The Ladder, Army Line",
+  "quests": [
+    {
+      "id": "the-score",
+      "name": "The Score",
+      "summary": "Take the aptitude battery and sign with open eyes.",
+      "stages": [
+        { "id": "warning", "objective": "Review deployment and custody consequences with Dana.", "dialogue": "dana-enlistment" },
+        { "id": "battery", "objective": "Complete 12 timed verbal, mechanical, spatial, and arithmetic questions.", "scoring": { "timeSeconds": 180, "rankBands": [[0, 5, "E-1"], [6, 8, "E-2"], [9, 10, "E-3"], [11, 12, "E-4"]] } },
+        { "id": "paperwork", "objective": "Choose an enlistment term and read the casualty-risk language before signing.", "choice": [{ "id": "sign", "text": "Sign a 60-game-day term.", "effect": { "armyStatus": "recruit" } }, { "id": "pause", "text": "Take the paperwork back to Dana.", "effect": { "grit": 2 } }] }
+      ]
+    },
+    {
+      "id": "buzzcut",
+      "name": "Buzzcut",
+      "summary": "Complete three game days of basic training without confusing noise for purpose.",
+      "stages": [
+        { "id": "arrival", "objective": "Report to Staff Sgt. Vance and surrender prohibited inventory for storage.", "dialogue": "vance-arrival" },
+        { "id": "obstacle", "objective": "Complete timed crawl, wall, balance, and carry inputs. Discipline can recover one miss per tier.", "minigame": { "inputs": ["left", "action", "right", "action", "hold"], "seconds": 18 } },
+        { "id": "inspection", "objective": "Pass barracks inspection or own the error without blaming a squadmate.", "dialogue": "vance-inspection" },
+        { "id": "graduation", "objective": "Choose one starting role based on aptitude: logistics, communications, driver, or security.", "reward": { "grit": 35, "status": "active-duty" } }
+      ]
+    },
+    {
+      "id": "allotment",
+      "name": "Allotment",
+      "summary": "Make child support leave your pay before any other choice can reach it.",
+      "stages": [
+        { "id": "finance", "objective": "Meet the finance clerk and choose 10, 20, or 28 percent of base pay." },
+        { "id": "lock", "objective": "Choose whether the allotment can be paused during hardship.", "choice": [{ "id": "irrevocable", "text": "Make 28 percent automatic and irrevocable.", "effect": { "custodyIncomeBonus": 25, "cashMultiplier": 0.72, "choiceTag": "allotment-locked" } }, { "id": "flexible", "text": "Set 20 percent with a hardship pause.", "effect": { "custodyIncomeBonus": 16, "cashMultiplier": 0.8 } }, { "id": "minimum", "text": "Set the required 10 percent.", "effect": { "custodyIncomeBonus": 8, "cashMultiplier": 0.9 } }] },
+        { "id": "first-transfer", "objective": "Receive the first pay stub with the transfer already gone.", "dialogue": "Petty: Best money I spend is money I never get to improvise with." }
+      ]
+    },
+    {
+      "id": "first-rotation",
+      "name": "First Rotation",
+      "summary": "Run supplies with Petty and Dominguez and learn why squads lower individual risk.",
+      "stages": [
+        { "id": "load", "objective": "Balance water, medical crates, and fuel within the truck limit.", "dialogue": "squad-load" },
+        { "id": "bridge", "objective": "Choose a washed road or a slower ridge route.", "choice": [{ "id": "ridge", "text": "Take the ridge and arrive late but intact.", "effect": { "grit": 8, "risk": -0.02 } }, { "id": "wash", "text": "Cross the wash before weather closes it.", "effect": { "payBonus": 0.1, "risk": 0.04 } }] },
+        { "id": "breakdown", "objective": "Stay with Petty during repair or ride ahead with Dominguez.", "choice": [{ "id": "stay", "text": "Stay and finish the repair.", "effect": { "pettyBond": 12 } }, { "id": "ahead", "text": "Secure the next checkpoint.", "effect": { "dominguezBond": 12 } }] },
+        { "id": "return", "objective": "Debrief an uneventful mission without pretending uneventful means safe.", "reward": { "cashMultiplier": 3, "grit": 28, "tape": "tape-16" } }
+      ]
+    },
+    {
+      "id": "the-lottery",
+      "name": "The Lottery",
+      "summary": "A visible casualty number sits beside triple pay.",
+      "stages": [
+        { "id": "draw", "objective": "Receive a 3-5 day combat deployment offer generated 14-21 game days after the last rotation." },
+        { "id": "odds", "objective": "Review individual casualty odds after Combat, role, and squad-size reductions.", "formula": "baseRisk * (1 - combat*0.06) * (1 - min(squadSize-1,3)*0.08)", "example": { "base": 0.14, "combat": 2, "squadSize": 3, "final": 0.103 } },
+        { "id": "choice", "objective": "Accept, ask squadmates to deploy together, or decline.", "choice": [{ "id": "squad", "text": "Deploy with Petty and Dominguez.", "effect": { "riskMultiplier": 0.84, "payMultiplier": 3 } }, { "id": "alone", "text": "Accept the first open seat.", "effect": { "riskMultiplier": 1, "payMultiplier": 3 } }, { "id": "decline", "text": "Decline and remain for the custody hearing.", "effect": { "grit": -15, "promotion": -1, "choiceTag": "deployment-declined" } }] }
+      ]
+    },
+    {
+      "id": "contact",
+      "name": "Contact",
+      "summary": "An ambush makes squad bonds mechanical, not decorative.",
+      "stages": [
+        { "id": "quiet", "objective": "Choose vehicle order after Petty notices disturbed gravel.", "dialogue": "squad-before-contact" },
+        { "id": "ambush", "objective": "React to the disabled third vehicle within one decision window.", "choice": [{ "id": "cover", "text": "Lay cover while Dominguez reaches the driver.", "effect": { "dominguezSurvival": 0.22, "playerRisk": 0.04 } }, { "id": "driver", "text": "Reach the driver yourself while Petty covers.", "effect": { "pettySurvival": 0.16, "playerRisk": 0.09 } }, { "id": "cargo", "text": "Secure the medical cargo and hold position.", "effect": { "missionSuccess": 0.2, "squadSurvival": -0.14 } }] },
+        { "id": "turn", "objective": "Order Petty left or Dominguez right based on the earlier route read. Bond reveals the safer call.", "casualty": "A squadmate can die. The result is seeded and auditable, never silently rerolled." },
+        { "id": "after", "objective": "Sit through the after-action review and choose how to answer 'who called the turn.'", "dialogue": "contact-aftermath" }
+      ]
+    },
+    {
+      "id": "day-ninety",
+      "name": "Day Ninety",
+      "summary": "Attend a custody hearing remotely from deployment.",
+      "stages": [
+        { "id": "connection", "objective": "Find a stable video link before the docket calls the case." },
+        { "id": "hearing", "objective": "Let the allotment and service record count while absence also counts.", "dialogue": "remote-hearing" },
+        { "id": "order", "objective": "Receive an order based on normal factors plus allotment bonus and deployment absence penalty.", "modifiers": { "lockedAllotment": 12, "serviceRecord": 8, "deploymentAbsence": -10 } }
+      ]
+    },
+    {
+      "id": "terminal-leave",
+      "name": "Terminal Leave",
+      "summary": "After sixty game days, choose the reliable risk or the uncertain home.",
+      "stages": [
+        { "id": "benefits", "objective": "Review honorable-discharge benefits: VA voucher, SRO skip, education perk discount." },
+        { "id": "decision", "objective": "Re-up at higher pay and risk, or discharge and go home.", "dialogue": "terminal-leave-choice" },
+        { "id": "reup", "objective": "Sign another term with 1.35x pay and 1.2x deployment risk.", "branch": "reup" },
+        { "id": "home", "objective": "Accept the housing voucher and meet {{childName}} at the transit platform.", "branch": "discharge" }
+      ]
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "dana-enlistment",
+      "speaker": "Dana Reyes",
+      "nodes": [
+        { "id": "start", "text": "Recruitment called to verify your address. That is an efficient sentence with several problems inside it.", "choices": [{ "text": "The pay is guaranteed.", "next": "pay" }, { "text": "You said I could change paths.", "next": "change" }, { "text": "Tell me the problems.", "next": "problems" }] },
+        { "id": "pay", "text": "Yes. Friday comes whether the labor lot likes your face or not. An allotment can become your strongest custody evidence.", "choices": [{ "text": "Then why the look?", "next": "problems" }] },
+        { "id": "change", "text": "You can. I said the road changes. I did not say the road waits.", "choices": [{ "text": "What happens to custody?", "next": "problems" }] },
+        { "id": "problems", "text": "Training takes three game days. Deployments take three to five. Hearings continue. A judge can respect service and count absence in the same breath.", "choices": [{ "text": "The street can kill me too.", "next": "true" }, { "text": "What would you do?", "next": "notme" }] },
+        { "id": "true", "text": "True. The Army puts the odds in a box. The street leaves them in the weather.", "choices": [{ "text": "I'll read the box.", "next": "end" }] },
+        { "id": "notme", "text": "I would distrust anyone who answered that for you, including me.", "choices": [{ "text": "Fair.", "next": "end" }] },
+        { "id": "end", "text": "Set the allotment before the first paycheck. If you wait to feel rich, the money will find a louder need.", "end": true }
+      ]
+    },
+    {
+      "id": "vance-arrival",
+      "speaker": "Staff Sgt. Lena Vance",
+      "nodes": [
+        { "id": "start", "text": "Recruits, place civilian bags on the line. Contraband includes alcohol, blades, and confidence unsupported by evidence.", "choices": [{ "text": "Place the bag down.", "next": "photo" }, { "text": "What about this photograph?", "next": "photo" }] },
+        { "id": "photo", "text": "Photograph stays with you. If it motivates you, good. If it distracts you, learn the difference before an engine does.", "choices": [{ "text": "Yes, Sergeant.", "next": "title" }] },
+        { "id": "title", "text": "Staff Sergeant. The extra word was earned through paperwork and knee pain.", "choices": [{ "text": "Yes, Staff Sergeant.", "next": "bed" }] },
+        { "id": "bed", "text": "Bunk twelve. Make the bed square enough to offend nature. Formation in nine minutes, which is eight minutes after I stop explaining nine.", "end": true }
+      ]
+    },
+    {
+      "id": "vance-inspection",
+      "speaker": "Staff Sgt. Lena Vance",
+      "nodes": [
+        { "id": "start", "text": "This corner is folded like it has legal counsel. Who made the bed?",
+          "choices": [{ "text": "I did, Staff Sergeant.", "next": "own" }, { "text": "Petty showed me the fold.", "next": "blame" }, { "text": "The sheet is defective.", "next": "sheet" }] },
+        { "id": "own", "text": "Correct answer. Incorrect bed. One can improve before lunch.", "effect": { "discipline": 4, "vanceRespect": 8 }, "end": true },
+        { "id": "blame", "text": "Did Petty also move your hands? Fascinating. Both of you remake it until causality is established.", "effect": { "pettyBond": -3 }, "end": true },
+        { "id": "sheet", "text": "Submit a maintenance request to gravity. While it processes, remake the bed.", "effect": { "morale": 2 }, "end": true }
+      ]
+    },
+    {
+      "id": "squad-load",
+      "speaker": "Specialist Imani Petty",
+      "nodes": [
+        { "id": "start", "text": "Water, medical, fuel. Truck says we can bring two and a half. Dominguez says the truck is a pessimist.", "choices": [{ "text": "Water and medical. Half fuel.", "next": "dom" }, { "text": "Medical and fuel. Cut water.", "next": "water" }, { "text": "All three. Drive gently.", "next": "all" }] },
+        { "id": "dom", "speaker": "Corporal Mateo Dominguez", "text": "The truck is a realist. Petty thinks optimism changes axle ratings.", "choices": [{ "text": "Then we balance the load.", "next": "end" }] },
+        { "id": "water", "speaker": "Corporal Mateo Dominguez", "text": "People forgive late fuel. They do not drink apologies. Put water back.", "choices": [{ "text": "Water back. Half fuel.", "next": "end" }] },
+        { "id": "all", "speaker": "Specialist Imani Petty", "text": "Excellent. We will whisper encouragement to the suspension.", "choices": [{ "text": "Fine. Half fuel.", "next": "end" }] },
+        { "id": "end", "speaker": "Specialist Imani Petty", "text": "Look at us, compromising before sunrise. Civilization survives another hour.", "end": true }
+      ]
+    },
+    {
+      "id": "squad-before-contact",
+      "speaker": "Specialist Imani Petty",
+      "nodes": [
+        { "id": "start", "text": "Gravel ahead has tire marks over our tire marks. Somebody visited while we were at checkpoint two.", "choices": [{ "text": "Move our vehicle to the rear.", "next": "rear" }, { "text": "Keep order and increase distance.", "next": "distance" }, { "text": "Stop the convoy now.", "next": "stop" }] },
+        { "id": "rear", "speaker": "Corporal Mateo Dominguez", "text": "Rear watches the turn but loses the radio relay. Acceptable if Petty rides with you.", "effect": { "pettyPosition": "rear", "risk": -0.02 }, "end": true },
+        { "id": "distance", "speaker": "Corporal Mateo Dominguez", "text": "Ten vehicle lengths. If this is nothing, we lose a minute. Minutes are cheap today.", "effect": { "squadRisk": -0.01 }, "end": true },
+        { "id": "stop", "speaker": "Specialist Imani Petty", "text": "Stopping makes us a very organized target. Slow, spread, watch the left cut.", "effect": { "pettyBond": 3 }, "end": true }
+      ]
+    },
+    {
+      "id": "contact-aftermath",
+      "speaker": "Staff Sgt. Lena Vance",
+      "nodes": [
+        { "id": "start", "variants": { "all-survive": "Everybody returned. That changes the report, not the question. Who called the turn?", "petty-dead": "Petty did not return. The report needs sequence, not tribute. Who called the turn?", "dominguez-dead": "Dominguez did not return. We will say his name after we get the order right. Who called the turn?" }, "choices": [{ "text": "I did.", "next": "own" }, { "text": "We decided together.", "next": "together" }, { "text": "I don't remember.", "next": "remember" }] },
+        { "id": "own", "text": "Then describe what you knew when you called it. Do not borrow knowledge from the outcome.", "choices": [{ "text": "Describe the disturbed gravel, radio call, and choice.", "next": "after" }] },
+        { "id": "together", "text": "A squad can share a decision. The report cannot. Start with the first voice.", "choices": [{ "text": "It was mine.", "next": "own" }, { "text": "It was theirs.", "next": "after" }] },
+        { "id": "remember", "text": "That may be true. Sit with it until you can separate missing memory from a memory you dislike.", "choices": [{ "text": "Sit.", "next": "after" }] },
+        { "id": "after", "text": "Guilt is not a map back through the event. Use the map we have. Sleep when they release you.", "effect": { "survivorGuilt": true, "morale": -22 }, "end": true }
+      ]
+    },
+    {
+      "id": "remote-hearing",
+      "speaker": "Judge Evelyn Whitfield",
+      "nodes": [
+        { "id": "open", "text": "The connection is unstable. The record, unfortunately, is clear.", "choices": [{ "text": "I can hear you, Your Honor.", "next": "allotment" }] },
+        { "id": "allotment", "variants": { "locked": "The irrevocable allotment has arrived every pay period. It is the strongest income evidence before this court.", "flexible": "The allotment has arrived regularly, with one hardship pause.", "minimum": "The required allotment is current." }, "choices": [{ "text": "Yes, Your Honor.", "next": "absence" }] },
+        { "id": "absence", "text": "You have also missed two in-person visits due to deployment. Service explains absence. It does not convert absence into presence.", "choices": [{ "text": "No, Your Honor.", "next": "answer" }, { "text": "The choice wasn't simple.", "next": "simple" }] },
+        { "id": "simple", "text": "I did not call it simple. I called it a factor.", "choices": [{ "text": "Understood.", "next": "answer" }] },
+        { "id": "answer", "text": "What should {{childName}} understand about why you are not in this room?",
+          "choices": [{ "text": "That I chose steady money and accepted the cost.", "next": "end" }, { "text": "That I am trying to come home with something solid.", "next": "end" }, { "text": "That I may have chosen wrong for a reason that was real.", "next": "end" }] },
+        { "id": "end", "text": "The court will not edit that answer. It will be included as given.", "end": true }
+      ]
+    },
+    {
+      "id": "terminal-leave-choice",
+      "speaker": "Staff Sgt. Lena Vance",
+      "nodes": [
+        { "id": "start", "text": "Sixty days. The Army offers another term because you became expensive to replace. Home offers no such compliment.", "choices": [{ "text": "What would re-up mean?", "next": "reup" }, { "text": "What does discharge give me?", "next": "home" }] },
+        { "id": "reup", "text": "Thirty-five percent more base pay. Promotion track restored. Twenty percent more deployment exposure. The numbers are honest and incomplete.", "choices": [{ "text": "Re-up.", "next": "signed" }, { "text": "Tell me about home.", "next": "home" }] },
+        { "id": "home", "text": "Honorable discharge, VA voucher that skips the SRO wait, education discount, and the opportunity to discover whether you can live without a formation telling you when morning starts.", "choices": [{ "text": "Take the voucher. Go home.", "next": "platform" }, { "text": "I need the pay. Re-up.", "next": "signed" }] },
+        { "id": "signed", "text": "Then sign once. Nobody gets more committed by pressing harder.", "stage": "Vance signs below you. Petty or Dominguez waits outside with coffee and does not ask whether it was the right choice.", "effect": { "branch": "reup", "payMultiplier": 1.35, "riskMultiplier": 1.2 }, "end": true },
+        { "id": "platform", "text": "Turn in your field gear. Keep the photograph. It was never ours.", "stage": "At the Halvern platform, {{childName}} stands beside Dana. They see you before the train stops and lift one hand, the same almost-wave from the first visit. This time you have time to answer it.", "effect": { "branch": "discharge", "housing": "studio", "vaVoucher": true }, "end": true }
+      ]
+    }
+  ],
+  "events": [
+    { "id": "army-payday", "schedule": "every 7 game days after enlistment", "effect": "rank base pay minus allotment" },
+    { "id": "deployment-lottery", "schedule": "random 14-21 game days after rotation", "visibleOdds": true },
+    { "id": "deployment-death", "condition": "seeded casualty roll fails after all modifiers", "effect": "permanent character death and Honor ending trigger" },
+    { "id": "honorable-discharge", "condition": "60 game days service", "effect": "VA voucher and education perk discount" }
+  ]
+}

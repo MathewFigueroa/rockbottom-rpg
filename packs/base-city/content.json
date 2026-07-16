@@ -1,0 +1,89 @@
+{
+  "kind": "base",
+  "maps": [
+    {
+      "id": "halvern-city",
+      "name": "Halvern City",
+      "tileSize": 16,
+      "width": 128,
+      "height": 96,
+      "spawn": { "x": 18, "y": 70, "district": "riverfront" },
+      "districts": [
+        { "id": "downtown", "name": "Downtown", "bounds": [42, 26, 40, 32], "landmarks": ["Whitfield Courthouse", "Mercy House Shelter", "Transit Hub"], "policeDay": 0.8, "policeNight": 0.55 },
+        { "id": "industrial", "name": "Industrial", "bounds": [2, 3, 42, 34], "landmarks": ["Day-Labor Lot", "Warehouse 17", "Freight Yard"], "pvp": "night", "policeDay": 0.35, "policeNight": 0.15 },
+        { "id": "riverfront", "name": "Riverfront", "bounds": [2, 52, 45, 42], "landmarks": ["Route 9 Underpass", "Camp Three", "Recycling Center"], "policeDay": 0.25, "policeNight": 0.2 },
+        { "id": "market-row", "name": "Market Row", "bounds": [45, 58, 38, 36], "landmarks": ["Okafor Pawn & Repair", "Mara's Diner", "Kite Corner Store"], "policeDay": 0.55, "policeNight": 0.7 },
+        { "id": "northside", "name": "Northside", "bounds": [84, 4, 42, 88], "landmarks": ["Halvern Family Center", "Maple Park", "Riley's Block"], "policeDay": 0.65, "policeNight": 0.65 },
+        { "id": "fort-halvern", "name": "Fort Halvern Annex", "bounds": [48, 2, 34, 22], "landmarks": ["Recruitment Center", "Training Yard", "Deployment Staging"], "policeDay": 0, "policeNight": 0 }
+      ],
+      "transit": [
+        { "from": "riverfront", "to": "downtown", "minutes": 9, "fare": 2 },
+        { "from": "downtown", "to": "market-row", "minutes": 7, "fare": 2 },
+        { "from": "market-row", "to": "northside", "minutes": 14, "fare": 3 },
+        { "from": "downtown", "to": "fort-halvern", "minutes": 18, "fare": 3 },
+        { "from": "industrial", "to": "riverfront", "minutes": 11, "fare": 2 }
+      ]
+    }
+  ],
+  "items": [
+    { "id": "creased-photo", "name": "Creased Photo", "kind": "keepsake", "price": 0, "locked": true, "description": "Your child mid-laugh, one shoe untied. Cannot be sold, dropped, traded, fenced, or stolen." },
+    { "id": "transit-pass", "name": "Day Transit Pass", "kind": "utility", "price": 6 },
+    { "id": "counter-plate", "name": "Counter Plate", "kind": "food", "price": 6, "hunger": 36 },
+    { "id": "coffee", "name": "Diner Coffee", "kind": "food", "price": 2, "energy": 10 },
+    { "id": "soap", "name": "Travel Soap", "kind": "need", "price": 3, "hygiene": 24 },
+    { "id": "tent", "name": "Two-Person Tent", "kind": "housing", "price": 90 },
+    { "id": "work-boots", "name": "Used Work Boots", "kind": "gear", "price": 38, "skill": "labor" },
+    { "id": "busker-guitar", "name": "Scarred Guitar", "kind": "gear", "price": 55, "skill": "charm" },
+    { "id": "warehouse-gloves", "name": "Grip Gloves", "kind": "gear", "price": 18, "skill": "labor" },
+    { "id": "army-ribbon", "name": "Service Ribbon", "kind": "tape", "price": 0 },
+    { "id": "pawn-ticket", "name": "Pawn Ticket 1187", "kind": "tape", "price": 0 },
+    { "id": "microcassette", "name": "Microcassette", "kind": "tape", "price": 0 },
+    { "id": "returned-letter", "name": "Returned Letter", "kind": "tape", "price": 0 },
+    { "id": "court-page", "name": "Court Transcript Page", "kind": "tape", "price": 0 },
+    { "id": "sro-key", "name": "Room 306 Key", "kind": "quest", "price": 0 },
+    { "id": "child-crayon", "name": "Blue Crayon", "kind": "keepsake", "price": 0, "locked": true },
+    { "id": "phone-basic", "name": "Prepaid Phone", "kind": "utility", "price": 24 },
+    { "id": "bike", "name": "Courier Bicycle", "kind": "gear", "price": 120, "skill": "hustle" },
+    { "id": "apartment-key", "name": "Apartment Key", "kind": "housing", "price": 0 },
+    { "id": "folded-flag", "name": "Folded Flag", "kind": "ending", "price": 0, "locked": true }
+  ],
+  "economy": {
+    "jobs": [
+      { "id": "recycling", "cash": [12, 24], "minutes": 45, "needs": { "energy": -6 } },
+      { "id": "day-labor", "cash": 42, "minutes": 480, "arrivalWindow": 15 },
+      { "id": "busking", "cash": [3, 32], "minutes": 60, "check": "charm" },
+      { "id": "courier", "cash": [18, 45], "minutes": 90, "check": "hustle" },
+      { "id": "lookout", "cash": [80, 150], "minutes": 120, "heat": 18 }
+    ],
+    "housing": [
+      { "id": "underpass", "weekly": 0, "custody": 0 },
+      { "id": "tent", "weekly": 0, "upfront": 90, "custody": 0.1 },
+      { "id": "shelter", "weekly": 0, "curfew": "22:00", "custody": 0.35 },
+      { "id": "sro", "weekly": 135, "deposit": 270, "custody": 0.65 },
+      { "id": "studio", "weekly": 240, "deposit": 480, "custody": 0.85 },
+      { "id": "two-bedroom", "weekly": 365, "deposit": 730, "custody": 1 }
+    ],
+    "gritMilestones": { "sobriety": [7, 30, 60, 90], "shelter": [3, 7, 14, 30], "shifts": [4, 10, 25, 50] }
+  },
+  "skillTrees": [
+    { "id": "labor", "tiers": ["Callused", "On Time", "Crew Lead", "Union Card", "Built to Last"] },
+    { "id": "hustle", "tiers": ["Route Sense", "Good Eye", "Margin", "Network", "Quiet Partner"] },
+    { "id": "discipline", "tiers": ["One More Hour", "Routine", "Clear Head", "Steady Hand", "Second Wind"] },
+    { "id": "charm", "tiers": ["Read the Room", "Regular Face", "De-escalate", "Earned Trust", "Open Door"] },
+    { "id": "combat", "tiers": ["Guard Up", "Footwork", "Buddy Check", "Cover", "Bring Them Home"] }
+  ],
+  "npcs": [
+    { "id": "mara-velasquez", "name": "Mara Velasquez", "role": "diner cook", "lines": ["Coffee is two. Advice costs more.", "Sit near the outlet if you need it.", "You working today or rehearsing the idea?", "The eggs are eggs. Don't interrogate them.", "Dana called. I said you ate. That's all I said.", "Riley still draw suns in the corner? Mine did that.", "Pay me Friday. Eat now."] },
+    { "id": "otis-bell", "name": "Otis Bell", "role": "transit driver", "lines": ["Exact fare, approximate schedule.", "Market Row, then Northside. Stay on if you're thinking.", "I remember faces better than passes.", "Last bus at eleven. Last means last.", "Fort stop takes eighteen if the bridge behaves.", "No sleeping across three seats. Two is a negotiation."] },
+    { "id": "lena-price", "name": "Lena Price", "role": "shelter regular", "lines": ["C-14? Window rattles. Fold paper in the latch.", "Curfew isn't personal. Feels personal at 10:01.", "Dana has the face she uses when the answer is no for now.", "I got twenty-two days. Then I got proud. Starting again.", "Take the top shower. Bottom pipe spits rust.", "You can borrow my alarm. Bring back the battery too."] },
+    { "id": "cal-bishop", "name": "Cal Bishop", "role": "shelter regular", "lines": ["Shoes under the pillow. Trust is for daylight.", "They call it temporary because nobody can spell indefinite.", "Labor lot picks strong backs and familiar ones.", "Sam pays fair, which is not the same as generous.", "Your kid's picture? Keep it inside the coat.", "Seven nights makes the bed feel like property. It isn't."] },
+    { "id": "nell-song", "name": "Nell Song", "role": "pawn customer", "lines": ["This mixer was my mother's. She hated cooking.", "Sam will tell you the truth and charge retail for it.", "A receipt is a tiny witness.", "You buying or learning how not to buy?", "The chain is plated. The story might be gold.", "I came back for the radio. Don't look surprised."] },
+    { "id": "devon-ike", "name": "Devon Ike", "role": "pawn customer", "lines": ["Laptop has no charger. Optimism has no warranty.", "Sam knows my cousin. This has never helped me.", "Family heirloom is seller for stolen.", "You didn't hear that from me.", "Market pays for confidence, not accuracy.", "If the serial is scratched, your memory should be clean."] },
+    { "id": "officer-mills", "name": "Officer Tessa Mills", "role": "HPD officer", "lines": ["Hands where the body camera can get bored.", "Route 9 clears at six. City order.", "A warning is paperwork I don't finish.", "Your record arrived before you did.", "Go home if you have one. Go to Mercy if you don't.", "I said move along, not disappear."] },
+    { "id": "officer-keene", "name": "Officer Ross Keene", "role": "HPD officer", "lines": ["Industrial is open PvP after dark. The hospital remains expensive.", "Heat makes every coincidence look scheduled.", "You want a lawyer or a speech? I can only arrange one.", "That package yours? Think before answering quickly.", "Court at nine means metal detector at eight-thirty.", "Keep the receipt. You'll need a better story without it."] },
+    { "id": "nia-barnes", "name": "Nia Barnes", "role": "Riverfront Kings lieutenant", "lines": ["Protection is a word people use when rent sounds rude.", "We keep trouble priced out of Camp Three.", "Tag the wall, not the memorial.", "A favor with no witness is just weather.", "Crew stash is not a pantry unless everybody agrees.", "Rats leave evidence. Everybody leaves evidence.", "Walk away now and the number gets smaller, not zero."] },
+    { "id": "junebug", "name": "Andre 'Junebug' Hall", "role": "Riverfront Kings runner", "lines": ["Nobody named me Junebug in winter.", "Courier bag makes cops think lunch. Usually.", "Nia talks slow when the price is fast.", "You can feud alone. Winning alone is different.", "Underpass tag needs blue. Orange belongs to West Cut.", "I don't steal bikes with child seats. Personal policy."] },
+    { "id": "ren-cho", "name": "Ren Cho", "role": "corner-store clerk", "lines": ["Bathroom key is attached to civilization.", "Soap is aisle two. Dignity is not stocked.", "Your card declined quietly. I can do the same.", "Payday Friday turns into Saturday here.", "Marcus already bought ice. That's either good or bad.", "Northside prices include the view."] },
+    { "id": "foreman-gus", "name": "Gus Amato", "role": "day-labor foreman", "lines": ["Boots, gloves, pulse. Line up.", "Late is absent with a story.", "Drywall today. Demo tomorrow if the permit lies.", "I pay at four. Don't ask at three-fifty-nine.", "You keep showing, I stop asking your name.", "Drink water before you become paperwork.", "Four shifts makes you a regular. Regular gets first call."] }
+  ]
+}

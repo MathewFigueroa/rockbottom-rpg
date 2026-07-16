@@ -1,0 +1,5 @@
+{
+  "id": "act2-army",
+  "version": "1.0.0",
+  "dependencies": ["base-city", "act1-thefloor"]
+}

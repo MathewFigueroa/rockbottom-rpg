@@ -1,0 +1,5 @@
+{
+  "id": "act3-theframe",
+  "version": "1.0.0",
+  "dependencies": ["base-city", "act1-thefloor", "act2-streets", "act2-army"]
+}

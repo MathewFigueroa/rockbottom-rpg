@@ -1,0 +1,132 @@
+{
+  "kind": "story-act",
+  "title": "Act 3: The Frame",
+  "trigger": "shared custody won, custody permanently denied, or deployment death",
+  "quests": [
+    {
+      "id": "the-frame",
+      "name": "The Frame",
+      "summary": "The adult child stops controlling the reconstructed parent and enters the record as themself.",
+      "stages": [
+        { "id": "hard-cut", "objective": "Let the city lose color and the interface pull beyond the screen edge.", "scene": "frame-reveal" },
+        { "id": "sam-across", "objective": "Listen to Sam explain which jobs were memories he supplied.", "scene": "sam-revealed" },
+        { "id": "child-playable", "objective": "As the adult child, decide how much testimony can become belief.", "scene": "adult-child-final" },
+        { "id": "echoes", "objective": "Hear ten recorded choices re-voiced by the child.", "scene": "choice-echoes" },
+        { "id": "ending", "objective": "Close the reconstruction with Forgiveness, Honor, The Cycle, or The File Closed.", "scene": "resolved-ending" }
+      ]
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "frame-reveal",
+      "speaker": "Narration",
+      "nodes": [
+        { "id": "cut", "stage": "Sound stops in the middle of a room tone. Halvern's sodium orange drains to gray. The camera rises past the courthouse ceiling, past the map border, past a thin black bezel nobody had been shown.", "text": "The city occupies a laptop screen on a kitchen table.", "choices": [{ "text": "Pull back.", "next": "table" }] },
+        { "id": "table", "stage": "Beside the laptop: twenty-four labeled tapes, returned envelopes, court copies, a service ribbon, an evidence photograph of a bracelet. Older hands rest near the keyboard. They belong to {{childName}}, now grown.", "text": "The creased photograph lies face down between the hands.", "choices": [{ "text": "Turn it over.", "next": "sam" }, { "text": "Look across the table.", "next": "sam" }] },
+        { "id": "sam", "stage": "Sam Okafor sits across the table. His beard is white. His voice is the same voice from the pawn shop, without the compression of memory.", "text": "SAM: That is as far as the records take us cleanly.", "choices": [{ "text": "You gave them the lamp job.", "next": "lamp" }, { "text": "You knew this whole time.", "next": "knew" }] },
+        { "id": "lamp", "speaker": "Sam Okafor", "text": "I told you about a lamp. Your program made it a job because jobs have edges. Life was less considerate.", "choices": [{ "text": "Did it happen?", "next": "happen" }] },
+        { "id": "knew", "speaker": "Sam Okafor", "text": "Knew what? That you were asking your way into a person? Yes. That I could give you the person? No.", "choices": [{ "text": "Did any of it happen the way I played it?", "next": "happen" }] },
+        { "id": "happen", "speaker": "Sam Okafor", "text": "The pawn ticket happened. Your parent's hands happened. The choice is where memory starts charging interest.", "effect": { "playerCharacter": "adult-child" }, "end": true }
+      ]
+    },
+    {
+      "id": "sam-revealed",
+      "speaker": "Sam Okafor",
+      "nodes": [
+        { "id": "start", "text": "On the street line, I knew them through this counter. On the Army line, I knew them through the veterans hall. You made both versions use my face because the box needed one witness it could trust.", "choices": [{ "text": "Could I trust you?", "next": "trust" }, { "text": "Why did you let me make you younger?", "next": "younger" }] },
+        { "id": "trust", "text": "For dates? Mostly. For prices? Check my ledger. For what your parent meant? I was a friend, not a warrant.", "choices": [{ "text": "You kept the ribbon.", "next": "ribbon" }] },
+        { "id": "younger", "text": "You did not ask permission. It was flattering for ten minutes.", "choices": [{ "text": "You kept the ribbon.", "next": "ribbon" }] },
+        { "id": "ribbon", "text": "I kept an envelope. You put the ribbon in it because empty evidence bothered you.", "choices": [{ "text": "What bothered you?", "next": "answer" }] },
+        { "id": "answer", "text": "How badly you wanted the story to rule one way. Good parent. Bad parent. Hero. File. People become easy right before we stop seeing them.", "end": true }
+      ]
+    },
+    {
+      "id": "adult-child-final",
+      "speaker": "Adult {{childName}}",
+      "nodes": [
+        { "id": "start", "text": "I kept trying to arrive at a verdict because court records taught me that every room ends with one.", "choices": [{ "text": "Believe the choices that cost them something.", "next": "cost" }, { "text": "Believe only what two records agree on.", "next": "records" }, { "text": "Stop asking belief to do memory's job.", "next": "memory" }] },
+        { "id": "cost", "text": "Cost can prove commitment. It can also prove there was nothing cheaper left. Still, I understand why I kept those scenes.", "choices": [{ "text": "Keep the heirloom choice as played.", "next": "heirloom" }, { "text": "Mark every uncertain scene as uncertain.", "next": "uncertain" }] },
+        { "id": "records", "text": "Two records can share one mistake. Two people can borrow one story. But the dates stop moving when I do this.", "choices": [{ "text": "Facts are enough.", "next": "facts" }, { "text": "Facts need not be the whole person.", "next": "uncertain" }] },
+        { "id": "memory", "text": "Then I can let the reconstruction be an act I performed, not a door I discovered.", "choices": [{ "text": "And what did the act change?", "next": "change" }] },
+        { "id": "heirloom", "text": "They say you gave the heirloom back. I want to believe that. Wanting is now part of the citation.", "effect": { "belief": "chosen" }, "end": true },
+        { "id": "uncertain", "text": "I can write 'uncertain' without writing 'meaningless.' That is the first honest label in the box.", "effect": { "belief": "open" }, "end": true },
+        { "id": "facts", "text": "The allotment cleared. The visits were signed. The charges were filed or they were not. Enough for history, perhaps. Not enough for hunger.", "effect": { "belief": "documentary" }, "end": true },
+        { "id": "change", "text": "It put their photograph on my side of the table.", "effect": { "belief": "relational" }, "end": true }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "choice-echoes",
+      "count": 10,
+      "priority": ["heirloom", "allotment", "relapse", "lookout", "first-visitation", "deployment", "crew-rat", "wallet", "terminal-leave", "custody-answer"],
+      "lines": [
+        { "choice": "heirloom-returned", "text": "They say you gave the heirloom back. I want to believe that." },
+        { "choice": "heirloom-fenced", "text": "The initials were gone when police found the bracelet. I had made your hand hold the file." },
+        { "choice": "allotment-locked", "text": "The money arrived every Friday before you could be brave or weak with it." },
+        { "choice": "relapse-declined", "text": "Marcus said you missed the roof and took the second bus sober. He sounded proud and annoyed." },
+        { "choice": "relapse-accepted", "text": "The shelter log says you missed curfew. My version gave the night better music than the log did." },
+        { "choice": "lookout-walked", "text": "You walked toward the officer with your hands visible. Or Sam said you learned to do that later." },
+        { "choice": "lookout-ran", "text": "The freight camera caught somebody running. I chose your coat because the story already needed it." },
+        { "choice": "visit-blue", "text": "You kept the blue crayon. I remember giving it to someone. I do not remember deciding it was you." },
+        { "choice": "deployment-accepted", "text": "You entered the number in the clean little box and went anyway." },
+        { "choice": "deployment-declined", "text": "You stayed for the hearing and lost the promotion. The order does not mention that." },
+        { "choice": "crew-rat", "text": "Someone was paid for the report. I made you choose because no tape would." },
+        { "choice": "wallet-returned", "text": "Mara remembered the returned wallet. She also remembered the pie being fresh. One of those is wrong." },
+        { "choice": "terminal-home", "text": "You came home with a voucher and no formation. I remember the station, or a photograph of the station." },
+        { "choice": "terminal-reup", "text": "You signed again. Steady money can look like courage from far away." },
+        { "choice": "custody-honest", "text": "You told the judge you might have chosen wrong for a real reason. That sentence exists in your voice." }
+      ]
+    }
+  ],
+  "endings": [
+    {
+      "id": "forgiveness",
+      "name": "FORGIVENESS",
+      "condition": "shared custody won",
+      "scenes": [
+        { "stage": "The laptop shows the two-bedroom apartment reconstructed from inspection photographs: second toothbrush, library books, blue crayon in a kitchen drawer.", "narration": "You did come back. Not all at once. There were weekends I watched the window and weekends you were already downstairs." },
+        { "stage": "Adult {{childName}} opens an album not included in the evidence box. Later photographs fill its pages: school pickup, a burned birthday cake, Sam asleep in a folding chair, the parent older and looking directly at the camera.", "narration": "I built the missing years because the years after them were ordinary enough to hide the cost. I wanted to know who climbed into our life before I was old enough to watch." },
+        { "stage": "Sam turns the creased photograph over. Adult {{childName}} places beside it a second print from the same afternoon. In this one the child's small hand reaches toward the camera and the parent is a blurred shape reflected in a window.", "dialogue": "SAM: There. Evidence from your side." },
+        { "stage": "The two photographs overlap. The crease completes a line from one hand to the other.", "narration": "I forgive the years you missed. I do not make them disappear. I keep the difference." },
+        { "stage": "Title card: FORGIVENESS. New Game+ unlocks. All tapes are visible from dawn.", "end": true }
+      ]
+    },
+    {
+      "id": "honor",
+      "name": "HONOR",
+      "condition": "deployment death",
+      "scenes": [
+        { "stage": "A finance statement continues after the casualty date. The allotment reaches the guardian account on Friday, then the survivor benefit replaces it.", "narration": "The money came home on time. You did not." },
+        { "stage": "A younger Sam, seen now as interview footage rather than reconstruction, carries a folded flag to a Northside kitchen. Child {{childName}} is too short for the table and holds one corner because an adult asks them to.", "narration": "They taught me to call the triangle honor. It was also cloth, weight, and a reason nobody answered ordinary questions." },
+        { "stage": "Petty or Dominguez sits beside Sam and tells the supply-crate story before telling the ambush story. The survivor corrects one joke and cannot finish the correction.", "narration": "Sam gave me your dry humor. Your squad gave me the silence after it." },
+        { "stage": "At Fort Halvern, adult {{childName}} finds the parent's name etched among others. Their finger stops one line below it, then returns.", "dialogue": "ADULT CHILD: I can honor what you did without calling the risk a debt you owed me." },
+        { "stage": "The service ribbon rests in its empty pawn envelope beneath the name.", "narration": "You were not the folded flag. You were the Friday transfer, the three ruined postcards, the choice at the disabled truck, and everything the stone cannot hold." },
+        { "stage": "Title card: HONOR. New Game+ unlocks. All tapes are visible from dawn.", "end": true }
+      ]
+    },
+    {
+      "id": "the-cycle",
+      "name": "THE CYCLE",
+      "condition": "custody lost and villain drift high but high-crime threshold not reached",
+      "scenes": [
+        { "stage": "Adult {{childName}} closes the case file but leaves Marcus's voicemail on the table. A phone lights beside it with three missed calls from a contact labeled HOME.", "narration": "I said I was studying you. Sam said repetition can wear a lab coat." },
+        { "stage": "In the dark laptop screen, the adult child's face occupies the same place the parent sprite stood under Route 9. An unopened bottle sits near the sink. No music plays.", "dialogue": "SAM: What happens next is not evidence yet." },
+        { "stage": "The player receives control as the adult child. Two actions remain: CALL HOME and GO OUT. Neither displays odds, morality, or reward.", "choice": [{ "id": "call", "text": "Call home.", "result": "The phone rings. Someone answers with your name, awake and unsurprised. Cut before either person speaks again." }, { "id": "out", "text": "Take the coat and go out.", "result": "At the door, your hand touches the photograph in the coat pocket. The door opens. Cut before the threshold." }] },
+        { "stage": "Title card: THE CYCLE. New Game+ unlocks. All tapes are visible from dawn.", "end": true }
+      ]
+    },
+    {
+      "id": "file-closed",
+      "name": "THE FILE CLOSED",
+      "condition": "custody lost and high crime",
+      "scenes": [
+        { "stage": "The final police archive finishes loading. Dates align with the pawn ledger, the warehouse camera, and three anonymous reports. There is no remaining contradiction large enough to live inside.", "narration": "I had called uncertainty mercy. Then the records agreed." },
+        { "stage": "Sam reaches toward tape 23. Adult {{childName}} moves the box away without anger.", "dialogue": "ADULT CHILD: You can keep the story where they were kind to you. I am done asking it to become mine." },
+        { "stage": "The creased photograph goes into an archival sleeve, labeled with date, place, and photographer unknown. It is placed in the box rather than carried.", "narration": "A fact can be enough to stop. Stopping can be the only inheritance you accept." },
+        { "stage": "The box closes. No phone rings. Sam remains until the kitchen light is turned off, then leaves the key on the table.", "narration": "File closed." },
+        { "stage": "Title card: THE FILE CLOSED. New Game+ unlocks. All tapes are visible from dawn.", "end": true }
+      ]
+    }
+  ]
+}
