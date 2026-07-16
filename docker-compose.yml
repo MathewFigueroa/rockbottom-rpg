@@ -1,0 +1,131 @@
+name: rockbottom
+
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      server: { condition: service_healthy }
+      client: { condition: service_healthy }
+      admin: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2019/config/"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+    mem_limit: 256m
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL:-postgresql://rockbottom:rockbottom@postgres:5432/rockbottom}
+      REDIS_URL: redis://redis:6379
+      ADMIN_USER: ${ADMIN_USER:-warden}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-now}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-development-secret-change-this-now}
+      PREMIUM_ALL_FREE: ${PREMIUM_ALL_FREE:-true}
+      DECISION_SPACING_SECONDS: ${DECISION_SPACING_SECONDS:-45}
+      STUCK_MISSED_WINDOWS: ${STUCK_MISSED_WINDOWS:-3}
+      STUCK_FAILED_ACTIONS: ${STUCK_FAILED_ACTIONS:-5}
+      STUCK_RESET_MINUTES: ${STUCK_RESET_MINUTES:-30}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 10s
+      timeout: 4s
+      retries: 10
+    mem_limit: 1024m
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 15s
+      timeout: 4s
+      retries: 8
+    mem_limit: 128m
+
+  admin:
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 15s
+      timeout: 4s
+      retries: 8
+    mem_limit: 128m
+
+  mcp:
+    build:
+      context: .
+      dockerfile: mcp/Dockerfile
+    restart: unless-stopped
+    environment:
+      MCP_TRANSPORT: sse
+      MCP_PORT: 3001
+      GAME_SERVER_URL: http://server:3000
+    depends_on:
+      server: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
+      interval: 15s
+      timeout: 4s
+      retries: 8
+    mem_limit: 256m
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rockbottom}
+      POSTGRES_USER: ${POSTGRES_USER:-rockbottom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rockbottom}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rockbottom} -d ${POSTGRES_DB:-rockbottom}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 1024m
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 4s
+      retries: 10
+    mem_limit: 384m
+
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
