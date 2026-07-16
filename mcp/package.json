@@ -1,0 +1,23 @@
+{
+  "name": "@rockbottom/mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": { "rockbottom-mcp": "dist/index.js" },
+  "scripts": {
+    "dev": "MCP_TRANSPORT=sse tsx watch --ignore ../node_modules --ignore ../client --ignore ../admin src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "rule-agent": "tsx examples/rule-agent.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.4",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
