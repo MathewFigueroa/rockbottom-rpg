@@ -6,6 +6,7 @@ import websocket from "@fastify/websocket";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { loadPacks } from "./packs.js";
 import { GameClock, MemoryStore } from "./store.js";
+import { storyView } from "./story.js";
 import { Simulation } from "./simulation.js";
 
 if (process.env.NODE_ENV === "production" && (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD === "change-me-now" || (process.env.ADMIN_SESSION_SECRET?.length ?? 0) < 32 || !process.env.CLIENT_ORIGIN || !process.env.SAVE_PATH)) throw new Error("Production requires ADMIN_PASSWORD, a 32-character ADMIN_SESSION_SECRET, CLIENT_ORIGIN and SAVE_PATH");
@@ -124,7 +125,7 @@ app.get("/api/agent/wait", async (request, reply) => {
 app.get("/api/agent/story", async (request, reply) => {
   const character = agentCharacter(request.headers.authorization, request.headers["x-agent-token"] as string | undefined);
   if (!character) return reply.code(401).send({ error: "invalid_agent_token" });
-  return { act: character.act, quest_step: character.questStep, objective: character.activeObjective, custody: sim.hearing(character), tapes: character.tapes.length };
+  return { narrative: storyView(character), act: character.act, quest_step: character.questStep, objective: character.activeObjective, custody: sim.hearing(character), tapes: character.tapes.length };
 });
 
 app.post("/api/agent/plan-note", async (request, reply) => {

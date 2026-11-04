@@ -1,4 +1,5 @@
-import { ACTIONS, calculateCustody, type CharacterState, type GameAction } from "@rockbottom/shared";
+import { advanceStory, choices } from "./story.js";
+import { ACTIONS, STORY_PROMPTS, calculateCustody, type CharacterState, type GameAction } from "@rockbottom/shared";
 import { GameClock, MemoryStore } from "./store.js";
 
 export interface ActionResult {
@@ -9,6 +10,7 @@ export interface ActionResult {
 }
 
 const objectiveFor = (character: CharacterState): string => {
+  if (character.story && character.act > 1) return STORY_PROMPTS[character.story.stage] ?? "Keep Tuesday’s visit.";
   if (character.act > 1) return "Choose your line: build on the streets or enlist at Fort Halvern.";
   if (character.questStep === 0) return "Earn your first $50. Recycling and day labor are available.";
   if (character.questStep === 1) return "Claim a bed at Dana Reyes's shelter before curfew.";
@@ -34,6 +36,11 @@ export class Simulation {
     let durationMinutes = 1;
     let message = "Done.";
     switch (action as GameAction) {
+      case "story_decision": {
+        const result = advanceStory(character, params.choice);
+        if (!result.ok) return this.fail(character, action, result.message);
+        message = `[${character.story!.events.at(-1)!.timeline}] ${result.message}`; durationMinutes = 30; break;
+      }
       case "collect_recycling":
         character.location = "Riverfront Recycling Center";
         character.cash += 18;
@@ -155,7 +162,7 @@ export class Simulation {
     runtime.observedAt = runtime.observedAt.filter((time) => now - time < 60_000);
     if (runtime.observedAt.length >= 6) return { ok: false, error: "observe_rate_limited", retry_at: new Date(runtime.observedAt[0]! + 60_000).toISOString() };
     runtime.observedAt.push(now);
-    const available = ACTIONS.map((name) => ({ name, params: name === "travel" ? { destination: "string" } : {} }));
+    const available = ACTIONS.map((name) => ({ name, params: name === "travel" ? { destination: "string" } : name === "story_decision" ? { choice: choices(character).join("|") } : {} }));
     return {
       ok: true,
       character: { id: character.id, name: character.name, mode: character.mode, status: character.status },

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { CharacterState, ControlMode } from "@rockbottom/shared";
+import { STORY_PROMPTS, STORY_CHOICES, type CharacterState, type ControlMode } from "@rockbottom/shared";
 import { api } from "./api";
 import { GameCanvas } from "./GameCanvas";
 
@@ -111,6 +111,7 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
       <aside className="objective-panel"><div className="objective-number">{String(character.questStep + 1).padStart(2, "0")}</div><div><small>ACT {character.act}: {character.act === 1 ? "THE FLOOR" : character.act === 2 ? "THE LADDER" : "THE FRAME"}</small><strong>{character.activeObjective}</strong></div></aside>
       <div className="location-pip"><span>⌖</span>{character.location}</div>
       {message && <button className="toast" onClick={() => setMessage("")}>{message}</button>}
+      {character.act >= 2 && <section className="dialogue-panel" aria-label="Second Wind story"><div><small>{character.story?.events.at(-1)?.timeline ?? 'THE SECOND COPY'}</small><p>{character.story?.events.at(-1)?.text ?? 'A clerk has a question about your signature. Open the record.'}</p><p>{STORY_PROMPTS[character.story?.stage ?? 0]}</p><div className="choice-list">{(STORY_CHOICES[character.story?.stage ?? 0] ?? []).map(choice => <button key={choice} disabled={busy} onClick={() => void act('story_decision', { choice })}>{choice.replaceAll('_', ' ')}</button>)}</div></div></section>}
       <ActionDock character={character} busy={busy} act={act} />
       <TouchControls onAction={() => void act(recommendedAction(character))} />
       {effectiveScene === "opening" && <OpeningPanel character={character} onClose={() => setMessage("The cart waits east of the pillar.")} />}
@@ -221,7 +222,12 @@ function Spectator({ characterId }: { characterId: string }) {
   useEffect(() => {
     let active = true;
     const poll = async () => { try { const next = await api.watch(characterId); if (active) setData(next); } catch (reason) { if (active) setError(reason instanceof Error ? reason.message : "Stream unavailable"); } };
-    void poll(); const timer = setInterval(() => void poll(), 1000); return () => { active = false; clearInterval(timer); };
+    void poll();
+    const wsUrl = new URL(`/ws/watch/${characterId}`, import.meta.env.VITE_API_URL || window.location.origin); wsUrl.protocol = wsUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socket = new WebSocket(wsUrl);
+    socket.onmessage = event => { if (active) setData(JSON.parse(event.data)); };
+    const timer = setInterval(() => { if (socket.readyState !== WebSocket.OPEN) void poll(); }, 3000);
+    return () => { active = false; socket.close(); clearInterval(timer); };
   }, [characterId]);
   if (error) return <main className="fatal"><h1>Stream unavailable</h1><p>{error}</p></main>;
   if (!data) return <main className="loading"><span/><span/><span/></main>;

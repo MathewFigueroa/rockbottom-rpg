@@ -14,21 +14,27 @@ test("manual player completes Act 1 through the understated visitation", async (
   await page.getByRole("button", { name: /Continue/ }).click();
   await page.getByRole("button", { name: /Stand up/ }).click();
 
-  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: /Collect recycling/ }).click();
-  await expect(page.locator(".resources > span").first()).toContainText("$58");
-  await page.getByRole("button", { name: /Claim C-14/ }).click();
-  await page.getByRole("button", { name: /Sleep at shelter/ }).click();
-  for (let i = 0; i < 4; i++) await page.getByRole("button", { name: /Work a shift/ }).click();
-  for (let i = 0; i < 6; i++) await page.getByRole("button", { name: /Sleep at shelter/ }).click();
-  await page.getByRole("button", { name: /Attend visitation/ }).click();
-  await expect(page.getByTestId("first-visitation")).toBeVisible();
-  for (let i = 0; i < 6; i++) await page.locator(".visit-copy button").first().click();
+  async function actButton(name: RegExp) {
+    const response = page.waitForResponse(r => r.url().endsWith('/action'));
+    await page.getByRole('button', { name }).click();
+    const result = await (await response).json();
+    await page.request.post(`${server}/api/admin/clock`, { headers: { 'x-admin-secret': 'dev-admin' }, data: { gameTime: result.state.nextDecisionAt, paused: true } });
+  }
+  for (let i = 0; i < 3; i++) await actButton(/Collect recycling/);
+  await expect(page.locator('.resources > span').first()).toContainText('$58');
+  await actButton(/Claim C-14/);
+  await actButton(/Sleep at shelter/);
+  for (let i = 0; i < 4; i++) await actButton(/Work a shift/);
+  for (let i = 0; i < 6; i++) await actButton(/Sleep at shelter/);
+  await page.getByRole('button', { name: /Attend visitation/ }).click();
+  await expect(page.getByTestId('first-visitation')).toBeVisible();
+  for (let i = 0; i < 6; i++) await page.locator('.visit-copy button').first().click();
   await expect(page.getByText(/Choose your line/)).toBeVisible();
   await expect(page.getByText("ACT 2: THE LADDER")).toBeVisible();
 });
 
 test("agent decision gates, rate limit, stuck park, and checkpoint safety are server enforced", async ({ request }) => {
-  await request.post(`${server}/api/admin/clock`, { headers: { "x-admin-secret": "dev-admin" }, data: { scale: 60, decisionSpacingSeconds: 1, stuckMissedWindows: 3, stuckFailedActions: 5, stuckResetMinutes: 1 } });
+  await request.post(`${server}/api/admin/clock`, { headers: { "x-admin-secret": "dev-admin" }, data: { paused: false, scale: 60, decisionSpacingSeconds: 1, stuckMissedWindows: 3, stuckFailedActions: 5, stuckResetMinutes: 1 } });
   const character = await createCharacter(request, "Gate Agent");
   await request.post(`${server}/api/characters/${character.id}/mode`, { data: { mode: "agent" } });
   const headers = { authorization: `Bearer ${character.agentToken}` };
@@ -85,7 +91,7 @@ test("zero-LLM rule policy survives seven game days and appears live to spectato
   await expect(page.getByText("RULE SEVEN", { exact: false }).first()).toBeVisible();
 });
 
-test("two clients share proximity, crews ally, chat arrives, and reports reach flag three", async () => {
+test("two clients share proximity, alliance requires consent, and reports remain pending", async () => {
   const first = await playwrightRequest.newContext();
   const second = await playwrightRequest.newContext();
   const a = await createCharacter(first, "Ari");
@@ -95,15 +101,15 @@ test("two clients share proximity, crews ally, chat arrives, and reports reach f
   const crewA = await (await first.post(`${server}/api/crews`, { data: { name: "North Cut", characterId: a.id } })).json();
   const crewB = await (await second.post(`${server}/api/crews`, { data: { name: "River Hands", characterId: b.id } })).json();
   const alliance = await first.post(`${server}/api/crews/${crewA.id}/ally`, { data: { crewId: crewB.id } });
-  expect((await alliance.json()).mutual).toBe(true);
+  expect(alliance.status()).toBe(409);
   await second.post(`${server}/api/chat`, { data: { characterId: b.id, channel: "proximity", message: "Day lot is hiring." } });
   expect((await (await first.get(`${server}/api/chat`)).json()).at(-1).message).toBe("Day lot is hiring.");
   for (let flag = 1; flag <= 3; flag++) {
     const report = await first.post(`${server}/api/reports`, { data: { reporterId: a.id, targetId: b.id, reason: `test evidence ${flag}`, fingerprint: "canvas-audio-ua-timezone" } });
     const body = await report.json();
-    expect(body.flagNumber).toBe(flag);
+    expect(body.status).toBe("pending");
     expect(body.evidence.fingerprintHash).toHaveLength(64);
-    if (flag === 3) expect(body.penalty).toContain("permanent");
+    expect(body.penalty).toContain("pending");
   }
   await first.dispose(); await second.dispose();
 });
@@ -118,6 +124,7 @@ test("all 24 tapes collect and the frame, Forgiveness, and Honor render end to e
   }
   const state = await (await request.get(`${server}/api/characters/${character.id}`)).json();
   expect(state.tapes).toHaveLength(24);
+  await page.context().addCookies(await request.storageState().then(s => s.cookies));
   await page.goto(`/?character=${character.id}&scene=reveal`);
   await expect(page.getByText("RECONSTRUCTION PAUSED")).toBeVisible();
   await page.goto(`/?character=${character.id}&scene=forgiveness`);
@@ -154,3 +161,20 @@ function chooseRuleAction(state: any) {
   if (state.questStep === 3) return "attend_visitation";
   return "safe_idle";
 }
+
+test('Second Copy is playable in the browser and broadcasts revealed scenes', async ({ page }) => {
+  const c = await (await page.request.post(`${server}/api/demo/sam`)).json();
+  await page.goto(`/?character=${c.id}&scene=city`);
+  const panel = page.getByRole('region', { name: 'Second Wind story' });
+  for (const choice of ['open record', 'army', 'verify copy', 'save neighbors', 'hear witnesses', 'protect witnesses']) {
+    const response = page.waitForResponse(r => r.url().endsWith('/action'));
+    await panel.getByRole('button', { name: choice, exact: true }).click();
+    const result = await (await response).json();
+    expect(result.ok).toBe(true);
+    await page.request.post(`${server}/api/admin/clock`, { headers: { 'x-admin-secret': 'dev-admin' }, data: { gameTime: result.state.nextDecisionAt, paused: true } });
+  }
+  await expect(panel).toContainText('You promise only Tuesday');
+  await page.goto(`/watch/${c.id}`);
+  await expect(page.getByText('Action ticker')).toBeVisible();
+  await expect(page.locator('.spectator-pane')).toContainText('DAY 30');
+});

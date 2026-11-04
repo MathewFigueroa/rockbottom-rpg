@@ -11,6 +11,7 @@ export interface Needs {
 }
 
 export interface CharacterState {
+  story?: { version: 1; stage: number; path: "street" | "army" | null; choice: string | null; events: Array<{ sequence: number; timeline: string; title: string; text: string }> };
   id: string;
   name: string;
   sex: ParentSex;
@@ -108,5 +109,18 @@ export const ACTIONS = [
   "busk",
   "enlist",
   "safe_idle",
+  "story_decision",
 ] as const;
 export type GameAction = (typeof ACTIONS)[number];
+
+/** Spoiler-free decision prompts; revealed scenes remain server-authoritative. */
+export const STORY_PROMPTS = [
+  "A clerk asks about your signature on the Route 9 evacuation ledger. Open the record?",
+  "Trace the duplicate through Nell's street witnesses or Vale's Army logistics archive. Each route puts a different ally at risk.",
+  "Authenticate the addresses with your chosen ally. A duplicate without a witness proves very little.",
+  "Floodwater threatens Mercy House. Rescue six residents and lose the original ledger, or secure the ledger while Nell evacuates without you. Sam may be hurt helping her. Neither choice can be undone.",
+  "Dana, Sam and Vale each withheld part of the record to protect someone. Hear their accounts before deciding what the city may know.",
+  "Publish the witness addresses to accelerate the audit, or submit sealed testimony to protect residents at the cost of delay. Custody still depends on sustained care.",
+  "The inquiry continues. Tuesday's visit is still yours to keep.",
+] as const;
+export const STORY_CHOICES = [['open_record'], ['street', 'army'], ['verify_copy'], ['save_neighbors', 'secure_ledger'], ['hear_witnesses'], ['publish_names', 'protect_witnesses'], []] as const;
