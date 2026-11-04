@@ -9,3 +9,8 @@ docs
 *.log
 *.sqlite
 .DS_Store
+
+# Durable world state contains private credentials
+data
+**/world.json
+**/world.json.tmp
