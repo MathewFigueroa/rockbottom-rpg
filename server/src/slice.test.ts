@@ -30,7 +30,7 @@ it('enforces time for manual and agent, and terminal death', () => {
   const m = new MemoryStore(); const c = m.createCharacter(input); const sim = new Simulation(m, new GameClock());
   expect(sim.act(c, 'collect_recycling').ok).toBe(true);
   expect(sim.act(c, 'collect_recycling').ok).toBe(false);
-  c.nextDecisionAt = new Date(0).toISOString(); c.status = 'dead'; expect(sim.act(c, 'safe_idle').ok).toBe(false);
+  c.nextDecisionAt = new Date(0).toISOString(); c.status = 'dead'; c.mode = 'agent'; c.actedWindow = c.decisionWindow; sim.tick(); expect(c.status).toBe('dead'); expect(sim.act(c, 'safe_idle').ok).toBe(false);
 });
 it('requires owner cookies, isolates agents and redacts spectator secrets', async () => {
   const created = await app.inject({ method: 'POST', url: '/api/characters', payload: input });

@@ -184,6 +184,7 @@ export class Simulation {
     const now = this.clock.nowMs();
     const config = this.clock.read();
     for (const character of this.store.characters.values()) {
+      if (character.status === "dead") continue;
       const runtime = this.store.runtime(character.id);
       if (character.status === "stuck" && runtime.stuckSince && now - runtime.stuckSince >= config.stuckResetMinutes * 60_000) {
         Object.assign(character, character.lastSafeCheckpoint ?? {});
@@ -216,6 +217,7 @@ export class Simulation {
   }
 
   private park(character: CharacterState, reason: string) {
+    if (character.status === "dead" || character.status === "stuck") return;
     const runtime = this.store.runtime(character.id);
     character.status = "stuck";
     runtime.stuckSince = this.clock.nowMs();
