@@ -13,6 +13,8 @@ if (process.env.NODE_ENV === "production" && (!process.env.ADMIN_PASSWORD || pro
 const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
 const store = new MemoryStore(process.env.SAVE_PATH);
 const clock = new GameClock();
+if (store.clockState) clock.update(store.clockState);
+function checkpoint() { store.clockState = clock.read(); store.save(); }
 const sim = new Simulation(store, clock);
 const packs = await loadPacks();
 const adminSessions = new Set<string>();
@@ -39,7 +41,7 @@ app.addHook("preHandler", async (request, reply) => {
   }
 });
 app.addHook("onSend", async (request, reply, payload) => {
-  if (request.method === "POST" && reply.statusCode < 400) store.save();
+  if (request.method === "POST" && reply.statusCode < 400) checkpoint();
   // Tokens and private notes must never escape through action, watch, or admin snapshots.
   if (typeof payload === "string" && reply.getHeader("content-type")?.toString().includes("application/json")) {
     const ownerView = /^\/api\/(characters|demo)\//.test(request.url) || request.url === "/api/characters";
@@ -284,8 +286,8 @@ app.post<{ Params: { scene: string } }>("/api/demo/:scene", async (request, repl
 });
 
 const ticker = setInterval(() => { sim.tick(); }, 250);
-const saver = setInterval(() => store.save(), 5000);
-app.addHook("onClose", async () => { clearInterval(ticker); clearInterval(saver); store.save(); });
+const saver = setInterval(checkpoint, 5000);
+app.addHook("onClose", async () => { clearInterval(ticker); clearInterval(saver); checkpoint(); });
 
 function agentCharacter(authorization?: string, direct?: string) {
   const token = direct ?? authorization?.replace(/^Bearer\s+/i, "");

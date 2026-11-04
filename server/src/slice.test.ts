@@ -12,9 +12,10 @@ it('persists and restores private ownership, progress, runtime and moderation', 
   const dir = mkdtempSync(join(tmpdir(), 'rb-'));
   try {
     const a = new MemoryStore(join(dir, 'save.json')); const c = a.createCharacter(input);
+    a.clockState = new GameClock().update({ scale: 30, paused: true });
     a.owners.set(c.id, 'hash'); c.act = 2; advanceStory(c, 'open_record'); a.save();
     const b = new MemoryStore(join(dir, 'save.json'));
-    expect(b.characters.get(c.id)?.story?.stage).toBe(1); expect(b.owners.get(c.id)).toBe('hash'); expect(b.runtime(c.id)).toBeTruthy();
+    expect(b.characters.get(c.id)?.story?.stage).toBe(1); expect(b.owners.get(c.id)).toBe('hash'); expect(b.runtime(c.id)).toBeTruthy(); expect(b.clockState?.paused).toBe(true); expect(b.clockState?.scale).toBe(30);
   } finally { rmSync(dir, { recursive: true }); }
 });
 for (const path of ['street', 'army']) for (const rescue of ['save_neighbors', 'secure_ledger']) for (const ending of ['publish_names', 'protect_witnesses']) it(`executes ${path}/${rescue}/${ending} once with consequences`, () => {

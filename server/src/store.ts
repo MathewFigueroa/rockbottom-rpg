@@ -43,6 +43,7 @@ export interface ModerationCase {
 }
 
 export class MemoryStore {
+  clockState: ClockState | undefined;
   readonly owners = new Map<string, string>();
   constructor(private readonly savePath?: string) {
     if (!savePath || !existsSync(savePath)) return;
@@ -52,13 +53,14 @@ export class MemoryStore {
     this.moderationCases.push(...data.moderationCases);
     this.chat.push(...data.chat);
     for (const id of data.packDisabled) this.packDisabled.add(id);
+    this.clockState = data.clockState;
     this.cashFaucets = data.cashFaucets; this.cashSinks = data.cashSinks;
     for (const c of this.characters.values()) c.spectatorCount = 0;
   }
   save() {
     if (!this.savePath) return;
     mkdirSync(dirname(this.savePath), { recursive: true });
-    const data: Record<string, unknown> = { version: 1, moderationCases: this.moderationCases, chat: this.chat.slice(-500), packDisabled: [...this.packDisabled], cashFaucets: this.cashFaucets, cashSinks: this.cashSinks };
+    const data: Record<string, unknown> = { version: 1, clockState: this.clockState, moderationCases: this.moderationCases, chat: this.chat.slice(-500), packDisabled: [...this.packDisabled], cashFaucets: this.cashFaucets, cashSinks: this.cashSinks };
     for (const key of ["characters", "runtimes", "crews", "bans", "owners"] as const) data[key] = [...this[key]];
     writeFileSync(`${this.savePath}.tmp`, JSON.stringify(data), { mode: 0o600 });
     renameSync(`${this.savePath}.tmp`, this.savePath);
