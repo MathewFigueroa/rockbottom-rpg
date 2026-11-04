@@ -4,14 +4,12 @@ WORKDIR /app
 COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @rockbottom/shared build && pnpm --filter @rockbottom/server build
+RUN pnpm --filter @rockbottom/server deploy --legacy --prod /runtime/server
 
 FROM node:22-alpine
 RUN addgroup -S rockbottom && adduser -S rockbottom -G rockbottom
 WORKDIR /app
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/server/node_modules ./server/node_modules
-COPY --from=build /app/shared ./shared
-COPY --from=build /app/server/dist ./server/dist
+COPY --from=build /runtime/server ./server
 COPY --from=build /app/packs ./packs
 COPY package.json ./package.json
 RUN mkdir -p /app/data && chown rockbottom:rockbottom /app/data

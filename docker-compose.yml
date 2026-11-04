@@ -33,7 +33,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: ${DATABASE_URL:-postgresql://rockbottom:rockbottom@postgres:5432/rockbottom}
+      DATABASE_URL: ${DATABASE_URL:-}
       REDIS_URL: redis://redis:6379
       SAVE_PATH: /app/data/world.json
       CLIENT_ORIGIN: https://${DOMAIN:?Set DOMAIN}

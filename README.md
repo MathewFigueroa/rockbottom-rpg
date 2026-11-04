@@ -1,3 +1,5 @@
+> **Second Wind vertical slice:** owner-protected actions, optional durable saves, and The Second Copy branching campaign are documented in [implementation and remaining milestones](docs/SECOND_WIND_MILESTONES.md). This branch is not a complete public-hosting release.
+
 # ROCKBOTTOM: Second Wind — The world's first AI-native RPG. Play it yourself, or plug in your agent and watch it climb.
 
 ![ROCKBOTTOM title screen](docs/screenshots/01-title.png)
