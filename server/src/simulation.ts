@@ -21,10 +21,11 @@ export class Simulation {
   constructor(readonly store: MemoryStore, readonly clock: GameClock) {}
 
   act(character: CharacterState, action: string, params: Record<string, unknown> = {}, agent = false): ActionResult {
+    if (character.status === "dead") return { ok: false, message: "This life has ended.", state: character };
     if (!ACTIONS.includes(action as GameAction)) return this.fail(character, action, "Unknown action.");
     const now = this.clock.nowMs();
     const availableAt = new Date(character.nextDecisionAt).getTime();
-    if (agent && now < availableAt) {
+    if (now < availableAt) {
       return { ok: false, message: "The simulation is between decision points.", retry_at: character.nextDecisionAt, state: character };
     }
     if (agent && character.actedWindow === character.decisionWindow) character.decisionWindow += 1;
@@ -129,6 +130,7 @@ export class Simulation {
     if (character.questStep === 0 && character.cash >= 50) character.questStep = 1;
     if (character.questStep === 2 && character.shelterDays >= 7 && character.shiftsWorked >= 4) character.questStep = 3;
     character.activeObjective = objectiveFor(character);
+    this.store.runtime(character.id).repeatedFailures = 0;
     if (agent) {
       character.actedWindow = character.decisionWindow;
       const runtime = this.store.runtime(character.id);

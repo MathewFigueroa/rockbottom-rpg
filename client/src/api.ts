@@ -3,7 +3,7 @@ import type { CharacterState, ControlMode } from "@rockbottom/shared";
 const API = import.meta.env.VITE_API_URL ?? "";
 
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API}${url}`, { ...init, headers: { "content-type": "application/json", ...init?.headers } });
+  const response = await fetch(`${API}${url}`, { ...init, credentials: "include", headers: { "content-type": "application/json", ...init?.headers } });
   if (!response.ok) {
     const body = await response.json().catch(() => ({ error: response.statusText }));
     throw new Error(body.message ?? body.error ?? response.statusText);

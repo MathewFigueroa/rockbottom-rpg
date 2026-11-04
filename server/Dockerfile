@@ -14,6 +14,7 @@ COPY --from=build /app/shared ./shared
 COPY --from=build /app/server/dist ./server/dist
 COPY --from=build /app/packs ./packs
 COPY package.json ./package.json
+RUN mkdir -p /app/data && chown rockbottom:rockbottom /app/data
 USER rockbottom
 ENV NODE_ENV=production PORT=3000
 EXPOSE 3000
