@@ -12,6 +12,7 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  watchRecords: (id: string) => json<Array<{ id: string; name: string; content: string }>>(`/api/watch/${id}/records`),
   createCharacter: (input: { name: string; sex: "male" | "female"; childName: string; childAge: number }) => json<CharacterState>("/api/characters", { method: "POST", body: JSON.stringify(input) }),
   character: (id: string) => json<CharacterState>(`/api/characters/${id}`),
   action: (id: string, action: string, params: Record<string, unknown> = {}) => json<{ ok: boolean; message: string; state: CharacterState }>(`/api/characters/${id}/action`, { method: "POST", body: JSON.stringify({ action, params }) }),

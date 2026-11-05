@@ -45,3 +45,9 @@ Sanctions require moderator decisions. Appeals require notes, preserve a review 
 The core campaign and the systems described above are playable and tested. Public hosting is still a separate operator release decision. This is one authoritative process with a transactionally saved JSONB world, not horizontally scaled simulation. Existing Prisma schemas are unused scaffolding; runtime PostgreSQL uses parameterized node-postgres queries. See [POSTGRES.md](POSTGRES.md) for migrations, imports and backups.
 
 Future expansions include voice/WebRTC and real voice evidence, continuous proximity movement/combat and consensual PvP, arbitrary third-party JSON pack compilation, signed publishing/federation, cross-shard accounts, provider-specific model evaluations, broader localization and more authored districts. Existing illustrative screenshot scenes do not imply these features are implemented. The selected authored campaign and its systems are the supported game mode in this review build.
+
+## Short spectator waits
+
+New worlds default to 10 game seconds between otherwise instantaneous decisions. Longer work/travel/sleep durations remain game-time durations. For a local world with exactly one character, `node tools/spectator-pacing.mjs CHARACTER_ID` adjusts the global clock after each new deadline to target a 10-second wall-clock wait. It requires the local development admin interface and refuses multi-character worlds. It preserves deadlines, pay and legal/service outcomes. The clock supports up to 3600×; waits longer than ten game hours can exceed the target. Model inference time is additional and cannot be promised to fit the timer. Stop the helper before changing the clock manually; its last clock scale persists until changed.
+
+Spectators can inspect the current objective, family context, resources and earned evidence, and select a local interpretation priority. That priority is not sent to the player-agent or saved as a game choice.

@@ -193,3 +193,12 @@ button:disabled { cursor: wait; opacity: 0.55; }
 .agent-voice small { color: #c7c5b8; line-height: 1.6; }
 .pause-panel { max-height: 90dvh; overflow: auto; }
 @media (max-width: 760px) { .campaign-tabs { gap: 3px; } .campaign-tabs button { padding: 8px 10px; font-size: 12px; } }
+
+.spectator-context { margin: 16px 0; padding: 14px; border: 1px solid var(--line); background: #1a282d; }
+.spectator-context p { font-size: 13px; line-height: 1.6; color: #ddd6c5; }
+.spectator-context dl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; }
+.spectator-context dd { margin: 4px 0; color: #e4c589; }
+.spectator-context summary { cursor: pointer; padding: 10px 0; font-size: 13px; }
+.spectator-prediction { display: flex; flex-wrap: wrap; gap: 6px; }
+.spectator-prediction button { padding: 8px; background: #293a40; color: #eee4ce; border: 1px solid #819093; }
+.spectator-prediction button[aria-pressed=true] { background: #655133; }

@@ -165,7 +165,7 @@ export class GameClock {
     gameTime: new Date().toISOString(),
     scale: 1,
     paused: false,
-    decisionSpacingSeconds: Number(process.env.DECISION_SPACING_SECONDS ?? 45),
+    decisionSpacingSeconds: Number(process.env.DECISION_SPACING_SECONDS ?? 10),
     stuckMissedWindows: Number(process.env.STUCK_MISSED_WINDOWS ?? 3),
     stuckFailedActions: Number(process.env.STUCK_FAILED_ACTIONS ?? 5),
     stuckResetMinutes: Number(process.env.STUCK_RESET_MINUTES ?? 30),
@@ -184,7 +184,7 @@ export class GameClock {
     const current = this.nowMs();
     this.anchorGame = input.gameTime ? new Date(input.gameTime).getTime() : current;
     this.anchorReal = Date.now();
-    if (typeof input.scale === "number") this.state.scale = Math.max(1, Math.min(60, input.scale));
+    if (typeof input.scale === "number") this.state.scale = Math.max(1, Math.min(3600, input.scale));
     if (typeof input.paused === "boolean") this.state.paused = input.paused;
     if (typeof input.decisionSpacingSeconds === "number") this.state.decisionSpacingSeconds = Math.max(1, input.decisionSpacingSeconds);
     if (typeof input.stuckMissedWindows === "number") this.state.stuckMissedWindows = Math.max(1, Math.floor(input.stuckMissedWindows));
