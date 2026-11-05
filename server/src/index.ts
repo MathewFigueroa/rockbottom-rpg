@@ -1,3 +1,4 @@
+import { decisionContext } from './decisions.js';
 import { reviewCase } from "./moderation.js";
 import { chatFor, sendChat } from "./chat.js";
 import Fastify from "fastify";
@@ -212,7 +213,7 @@ app.get("/api/agent/wait", async (request, reply) => {
 app.get("/api/agent/story", async (request, reply) => {
   const character = agentCharacter(request.headers.authorization, request.headers["x-agent-token"] as string | undefined);
   if (!character) return reply.code(401).send({ error: "invalid_agent_token" });
-  return { character: { name: character.name, mode: character.mode, status: character.status, needs: character.needs, cash: character.cash, housing: character.housing, record: character.record, nextDecisionAt: character.nextDecisionAt }, director: character.director, agent_memory: character.planNotes, messages: chatFor(store, character.id).slice(-10), recent_events: character.chronicle?.slice(-12) ?? [], archive: allRecords().filter(record => character.tapes.includes(record.id)), life: lifeView(character, store, clock.nowMs()), campaign: campaignView(character), narrative: storyView(character), act: character.act, quest_step: character.questStep, objective: character.activeObjective, custody: sim.hearing(character), tapes: character.tapes.length };
+  return { decision_context: decisionContext(character, store, clock.nowMs()), character: { name: character.name, sex: character.sex, mode: character.mode, status: character.status, needs: character.needs, cash: character.cash, housing: character.housing, record: character.record, nextDecisionAt: character.nextDecisionAt }, director: character.director, agent_memory: character.planNotes, messages: chatFor(store, character.id).slice(-10), recent_events: character.chronicle?.slice(-12) ?? [], archive: allRecords().filter(record => character.tapes.includes(record.id)), life: lifeView(character, store, clock.nowMs()), campaign: campaignView(character), narrative: storyView(character), act: character.act, quest_step: character.questStep, objective: character.activeObjective, custody: sim.hearing(character), tapes: character.tapes.length };
 });
 
 app.post("/api/agent/plan-note", async (request, reply) => {

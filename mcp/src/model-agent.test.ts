@@ -1,5 +1,51 @@
 import { expect, it } from 'vitest';
 import { runModelAgent } from '../examples/model-agent.js';
+it('re-prompts an out-of-menu recycling choice and submits the model-selected recovery instead', async () => {
+  let calls = 0; const submitted: string[] = [];
+  const fake = async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes('model.test')) {
+      calls++;
+      const prompt = JSON.parse(String(init?.body)).messages[1].content;
+      if (calls === 2) expect(prompt).toContain('outside the current decision menu');
+      return Response.json({ choices: [{ message: { content: JSON.stringify({ action: calls === 1 ? 'collect_recycling' : 'eat_diner', params: {} }) } }] });
+    }
+    if (url.endsWith('/story')) return Response.json({ character: { mode: 'agent' }, decision_context: { milestones: { bedDays: 7, shifts: 0 }, actions: [{ action: 'eat_diner', params: {}, category: 'recovery' }, { action: 'day_labor', params: {}, category: 'progress' }] } });
+    if (url.endsWith('/act')) { submitted.push(JSON.parse(String(init?.body)).action); return Response.json({ ok: true }); }
+    return Response.json({ ok: true, ready: true });
+  };
+  const result = await runModelAgent({ gameUrl: 'http://game.test', token: 'token', modelUrl: 'http://model.test', model: 'Loop test', maxTurns: 1 }, { fetch: fake as typeof fetch });
+  expect(submitted).toEqual(['eat_diner']); expect(result.modelCalls).toBe(2);
+});
+it('removes repetitive income after three decisions without milestones, while preserving the model’s story choice', async () => {
+  let calls = 0; const submitted: string[] = [];
+  const fake = async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes('model.test')) {
+      calls++;
+      const prompt = JSON.parse(JSON.parse(String(init?.body)).messages[1].content);
+      if (calls >= 4) { expect(prompt.progress_warning).toContain('Three decisions'); expect(prompt.state.decision_context.actions.map((a: any) => a.action)).toEqual(['story_decision']); }
+      return Response.json({ choices: [{ message: { content: JSON.stringify(calls < 5 ? { action: 'collect_recycling', params: {} } : { action: 'story_decision', params: { choice: 'army' } }) } }] });
+    }
+    if (url.endsWith('/story')) return Response.json({ character: { mode: 'agent' }, decision_context: { milestones: { stage: 1 }, actions: [{ action: 'collect_recycling', params: {}, category: 'income' }, { action: 'story_decision', params: { choice: 'army' }, category: 'progress' }] } });
+    if (url.endsWith('/act')) { submitted.push(JSON.parse(String(init?.body)).action); return Response.json({ ok: true }); }
+    return Response.json({ ok: true, ready: true });
+  };
+  await runModelAgent({ gameUrl: 'http://game.test', token: 'token', modelUrl: 'http://model.test', model: 'Loop test', maxTurns: 4 }, { fetch: fake as typeof fetch });
+  expect(submitted).toEqual(['collect_recycling', 'collect_recycling', 'collect_recycling', 'story_decision']);
+});
+it('stops a model that insists on invalid repetition without submitting a fallback action', async () => {
+  let submitted = 0;
+  const fake = async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.includes('model.test')) return Response.json({ choices: [{ message: { content: '{"action":"sleep_shelter","params":{}}' } }] });
+    if (url.endsWith('/story')) return Response.json({ character: { mode: 'agent' }, decision_context: { milestones: {}, actions: [{ action: 'day_labor', params: {}, category: 'progress' }] } });
+    if (url.endsWith('/act')) submitted++;
+    return Response.json({ ok: true, ready: true });
+  };
+  await expect(runModelAgent({ gameUrl: 'http://game.test', token: 'token', modelUrl: 'http://model.test', model: 'Stubborn model' }, { fetch: fake as typeof fetch })).rejects.toThrow('without substituting');
+  expect(submitted).toBe(0);
+});
 it('makes no model calls while waiting and submits only a parsed action when a real decision opens', async () => {
   let polls = 0; let calls = 0; let actions = 0;
   const fake = async (input: string | URL | Request, init?: RequestInit) => {
