@@ -11,10 +11,12 @@ const request = async (path, body) => {
 const shards = await request('/api/shards');
 if (shards[0]?.players !== 1) throw new Error('Fast-forward is global: use a local world with exactly one character');
 await request('/api/admin/clock', { decisionSpacingSeconds: 10 });
-let deadline = '';
+let deadline = ''; let reconnectFailures = 0;
 for (;;) {
+  try {
   const state = await request(`/api/watch/${id}`);
-  if (state.clock.paused) { await new Promise(r => setTimeout(r, 500)); continue; }
+  reconnectFailures = 0;
+  if (state.clock.paused) { deadline = ''; await new Promise(r => setTimeout(r, 500)); continue; }
   if (Date.parse(state.character.nextDecisionAt) <= Date.parse(state.clock.gameTime) && state.clock.scale !== 1) {
     await request('/api/admin/clock', { scale: 1 });
   }
@@ -22,7 +24,8 @@ for (;;) {
     const currentShards = await request('/api/shards');
     if (currentShards[0]?.players !== 1) {
       await request('/api/admin/clock', { scale: 1 });
-      throw new Error('Another character joined; stopped global fast-forward');
+      console.error('Another character joined; stopped global fast-forward');
+      break;
     }
     deadline = state.character.nextDecisionAt;
     const remaining = Math.max(0, Date.parse(deadline) - Date.parse(state.clock.gameTime));
@@ -31,4 +34,10 @@ for (;;) {
     console.log(new Date().toISOString(), `Next action wait ~${Math.ceil(remaining / scale / 1000)}s; clock ${scale.toFixed(1)}x`);
   }
   await new Promise(r => setTimeout(r, 500));
+  } catch (error) {
+    if (++reconnectFailures >= 10) throw error;
+    console.error('Waiting for local game to reconnect:', String(error));
+    deadline = '';
+    await new Promise(r => setTimeout(r, 1000));
+  }
 }

@@ -44,3 +44,15 @@ it('recovers owner access with a hashed recovery code and rotates agent credenti
   expect((await app.inject({ method: 'POST', url: '/api/agent/observe', headers: { authorization: `Bearer ${rotated.json().agentToken}` } })).statusCode).toBe(200);
   const restored = new MemoryStore(); restored.restore(store.snapshot()); expect(restored.ownerRecovery.get(c.id)).toBe(store.ownerRecovery.get(c.id)); expect(restored.characters.get(c.id)?.cash).toBe(4);
 });
+it('exposes exact decision contracts to the player agent without publishing its private context', async () => {
+  const c = store.createCharacter(input);
+  c.director = { brief: 'PRIVATE VIEWER PREFERENCE', shareSummaries: false, modelLabel: '' };
+  const missing = await app.inject({ method: 'GET', url: '/api/agent/story' });
+  expect(missing.statusCode).toBe(401);
+  const response = await app.inject({ method: 'GET', url: '/api/agent/story', headers: { authorization: `Bearer ${c.agentToken}` } });
+  expect(response.json().decision_context.actions).toContainEqual(expect.objectContaining({ action: 'collect_recycling', params: {} }));
+  expect(response.json().character.sex).toBe('female');
+  const publicView = await app.inject({ method: 'GET', url: `/api/watch/${c.id}` });
+  expect(publicView.body).not.toContain('decision_context');
+  expect(publicView.body).not.toContain('PRIVATE VIEWER PREFERENCE');
+});
