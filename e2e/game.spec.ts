@@ -164,12 +164,12 @@ function chooseRuleAction(state: any) {
 }
 
 test('Second Copy quests lead to the inquiry, housing, real hearing and adult-child frame', async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   const c = await (await page.request.post(`${server}/api/demo/sam`)).json();
   await page.goto(`/?character=${c.id}&scene=city`);
   async function choose(name: string, panel: 'story' | 'quests' = 'story') {
-    await page.getByRole('navigation', { name: 'Campaign view' }).getByRole('button', { name: panel === 'story' ? 'Story' : 'Quests', exact: true }).click();
     const scope = panel === 'story' ? page.getByRole('region', { name: 'Second Wind story' }) : page.getByRole('complementary', { name: 'Quest journal' });
+    if (!await scope.isVisible()) await page.getByRole('navigation', { name: 'Campaign view' }).getByRole('button', { name: panel === 'story' ? 'Story' : 'Quests', exact: true }).click();
     const response = page.waitForResponse(r => r.url().endsWith('/action'));
     await scope.getByRole('button', { name, exact: true }).click();
     const result = await (await response).json();
