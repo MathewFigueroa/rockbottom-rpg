@@ -10,7 +10,7 @@ export function completed(c: CharacterState, id: string) {
 }
 function unlocked(c: CharacterState, q: QuestDefinition) {
   if (completed(c, q.id)) return false;
-  if (q.id === 'the-frame') return c.status === 'dead' || completed(c, 'day-thirty');
+  if (q.id === 'the-frame') return c.status === 'dead' || (completed(c, 'day-thirty') && (!c.army || c.army.phase === 'discharged'));
   if (c.status === 'dead' || c.act < 2 || (c.story?.stage ?? 0) < 2) return false;
   if (q.path && q.path !== c.story?.path) return false;
   if (q.after && !completed(c, q.after)) return false;

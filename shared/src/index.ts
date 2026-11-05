@@ -1,3 +1,5 @@
+import type { ArmyState, LifeView, ChronicleEvent } from "./life.js";
+export * from "./life.js";
 import type { CampaignState } from "./campaign.js";
 export * from "./campaign.js";
 export type ParentSex = "male" | "female";
@@ -13,6 +15,9 @@ export interface Needs {
 }
 
 export interface CharacterState {
+  army?: ArmyState;
+  lifeView?: LifeView;
+  chronicle?: ChronicleEvent[];
   campaign?: CampaignState;
   storyChoices?: string[];
   campaignView?: CampaignState & { quests: Array<{ id: string; title: string; step: number; total: number; objective: string; options: Array<{ id: string; text: string; blocked?: string; fatalRisk: number }> }> };
@@ -116,6 +121,7 @@ export const ACTIONS = [
   "safe_idle",
   "story_decision",
   "quest_choice",
+  "army_action",
 ] as const;
 export type GameAction = (typeof ACTIONS)[number];
 

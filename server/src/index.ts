@@ -6,6 +6,7 @@ import websocket from "@fastify/websocket";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { loadPacks } from "./packs.js";
 import { GameClock, MemoryStore } from "./store.js";
+import { armyView } from "./army.js";
 import { campaignView } from "./campaign.js";
 import { storyView, choices } from "./story.js";
 import { PostgresRepository } from "./postgres.js";
@@ -99,7 +100,7 @@ app.post("/api/characters", async (request, reply) => {
 
 app.get<{ Params: { id: string } }>("/api/characters/:id", async (request, reply) => {
   const character = store.characters.get(request.params.id);
-  return character ? { ...character, campaignView: campaignView(character), storyChoices: choices(character) } : reply.code(404).send({ error: "character_not_found" });
+  return character ? { ...character, campaignView: campaignView(character), lifeView: armyView(character, clock.nowMs()), storyChoices: choices(character) } : reply.code(404).send({ error: "character_not_found" });
 });
 
 app.post<{ Params: { id: string } }>("/api/characters/:id/mode", async (request, reply) => {
@@ -159,7 +160,7 @@ app.get("/api/agent/wait", async (request, reply) => {
 app.get("/api/agent/story", async (request, reply) => {
   const character = agentCharacter(request.headers.authorization, request.headers["x-agent-token"] as string | undefined);
   if (!character) return reply.code(401).send({ error: "invalid_agent_token" });
-  return { campaign: campaignView(character), narrative: storyView(character), act: character.act, quest_step: character.questStep, objective: character.activeObjective, custody: sim.hearing(character), tapes: character.tapes.length };
+  return { life: armyView(character, clock.nowMs()), campaign: campaignView(character), narrative: storyView(character), act: character.act, quest_step: character.questStep, objective: character.activeObjective, custody: sim.hearing(character), tapes: character.tapes.length };
 });
 
 app.post("/api/agent/plan-note", async (request, reply) => {
