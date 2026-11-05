@@ -11,6 +11,7 @@ export interface CharacterCreateInput {
 }
 
 interface AgentRuntime {
+  randomSeed?: string;
   observedAt: number[];
   lastFailedAction: string;
   repeatedFailures: number;
@@ -127,7 +128,7 @@ export class MemoryStore {
       lastSafeCheckpoint: null,
     };
     this.characters.set(id, character);
-    this.runtimes.set(id, { observedAt: [], lastFailedAction: "", repeatedFailures: 0, missedWindows: 0, lastMissedAt: 0, stuckSince: null });
+    this.runtimes.set(id, { randomSeed: randomBytes(32).toString("hex"), observedAt: [], lastFailedAction: "", repeatedFailures: 0, missedWindows: 0, lastMissedAt: 0, stuckSince: null });
     return character;
   }
 

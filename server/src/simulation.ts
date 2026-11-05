@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+import { advanceQuest, campaignView } from "./campaign.js";
 import { advanceStory, choices } from "./story.js";
 import { ACTIONS, STORY_PROMPTS, calculateCustody, type CharacterState, type GameAction } from "@rockbottom/shared";
 import { GameClock, MemoryStore } from "./store.js";
@@ -23,7 +25,8 @@ export class Simulation {
   constructor(readonly store: MemoryStore, readonly clock: GameClock) {}
 
   act(character: CharacterState, action: string, params: Record<string, unknown> = {}, agent = false): ActionResult {
-    if (character.status === "dead") return { ok: false, message: "This life has ended.", state: character };
+    if (character.campaign?.perspective === "adult-child" && action !== "quest_choice") return { ok: false, message: "The archive cannot rewrite the parent’s actions.", state: character };
+    if (character.status === "dead" && action !== "quest_choice") return { ok: false, message: "This life has ended.", state: character };
     if (!ACTIONS.includes(action as GameAction)) return this.fail(character, action, "Unknown action.");
     const now = this.clock.nowMs();
     const availableAt = new Date(character.nextDecisionAt).getTime();
@@ -36,6 +39,14 @@ export class Simulation {
     let durationMinutes = 1;
     let message = "Done.";
     switch (action as GameAction) {
+      case "quest_choice": {
+        const result = advanceQuest(character, params, this.clock.now(), () => {
+          const runtime = this.store.runtime(character.id);
+          return runtime.randomSeed ??= randomBytes(32).toString('hex');
+        });
+        if (!result.ok) return this.fail(character, action, result.message);
+        message = result.message; durationMinutes = result.minutes; break;
+      }
       case "story_decision": {
         const result = advanceStory(character, params.choice);
         if (!result.ok) return this.fail(character, action, result.message);
@@ -79,12 +90,12 @@ export class Simulation {
         message = "Dana slides over a key tag: C-14. Curfew is ten.";
         break;
       case "sleep_shelter":
-        if (character.housing !== "shelter") return this.fail(character, action, "You do not have a shelter bed.");
+        if (["underpass", "tent"].includes(character.housing)) return this.fail(character, action, "You do not have an indoor bed.");
         character.shelterDays += 1;
         character.sobrietyDays += 1;
         character.needs = { hunger: Math.max(20, character.needs.hunger - 12), energy: 100, hygiene: Math.min(100, character.needs.hygiene + 18), morale: Math.min(100, character.needs.morale + 8) };
         character.grit += [7, 30, 60, 90].includes(character.sobrietyDays) ? 25 : 2;
-        character.location = "Mercy House Shelter";
+        character.location = character.housing === "shelter" ? "Mercy House Shelter" : "Home";
         durationMinutes = 480;
         message = `Night ${character.shelterDays}. C-14 still has your name on it.`;
         break;
@@ -136,7 +147,7 @@ export class Simulation {
 
     if (character.questStep === 0 && character.cash >= 50) character.questStep = 1;
     if (character.questStep === 2 && character.shelterDays >= 7 && character.shiftsWorked >= 4) character.questStep = 3;
-    character.activeObjective = objectiveFor(character);
+    character.activeObjective = campaignView(character).quests[0]?.objective ?? objectiveFor(character);
     this.store.runtime(character.id).repeatedFailures = 0;
     if (agent) {
       character.actedWindow = character.decisionWindow;
@@ -148,7 +159,7 @@ export class Simulation {
     const durationGameMs = durationMinutes * 60_000;
     const nextGameMs = now + Math.max(spacingGameMs, durationGameMs);
     character.nextDecisionAt = new Date(nextGameMs).toISOString();
-    character.status = durationMinutes >= 400 ? action === "sleep_shelter" ? "sleeping" : "working" : durationMinutes > 5 ? "traveling" : "active";
+    if (character.status !== "dead") character.status = durationMinutes >= 400 ? action === "sleep_shelter" ? "sleeping" : "working" : durationMinutes > 5 ? "traveling" : "active";
     character.actionLog.unshift({ at: this.clock.now(), action, detail: message });
     character.actionLog = character.actionLog.slice(0, 30);
     if (character.cash > previousCash) this.store.cashFaucets += character.cash - previousCash;
@@ -162,7 +173,7 @@ export class Simulation {
     runtime.observedAt = runtime.observedAt.filter((time) => now - time < 60_000);
     if (runtime.observedAt.length >= 6) return { ok: false, error: "observe_rate_limited", retry_at: new Date(runtime.observedAt[0]! + 60_000).toISOString() };
     runtime.observedAt.push(now);
-    const available = ACTIONS.map((name) => ({ name, params: name === "travel" ? { destination: "string" } : name === "story_decision" ? { choice: choices(character).join("|") } : {} }));
+    const available = ACTIONS.map((name) => ({ name, params: name === "travel" ? { destination: "string" } : name === "story_decision" ? { choice: choices(character).join("|") } : name === "quest_choice" ? { quest: "get_story_state", choice: "option_id", confirmPermanentDeath: "boolean" } : {} }));
     return {
       ok: true,
       character: { id: character.id, name: character.name, mode: character.mode, status: character.status },
@@ -227,6 +238,6 @@ export class Simulation {
   }
 
   private nearby(character: CharacterState) {
-    return [...this.store.characters.values()].filter((other) => other.id !== character.id && other.location === character.location).map((other) => ({ id: other.id, name: other.name, status: other.status }));
+    return [...this.store.characters.values()].filter((other) => other.id !== character.id && other.location === character.location).slice(-3).map((other) => ({ id: other.id, name: other.name, status: other.status }));
   }
 }

@@ -165,3 +165,25 @@ button:disabled { cursor: wait; opacity: 0.55; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+.campaign-tabs { position: absolute; z-index: 36; right: 18px; top: 88px; display: flex; gap: 8px; }
+.campaign-tabs button { padding: 10px 18px; background: #1e2c32; color: #fff5dc; border: 1px solid #7e8f91; }
+.campaign-tabs button[aria-pressed=true] { background: #645132; border-color: #e9c07c; }
+.story-dialogue { grid-template-columns: 1fr; max-height: calc(100dvh - 240px); overflow: auto; }
+.quest-journal { position: absolute; z-index: 35; left: 50%; transform: translateX(-50%); bottom: 82px; width: min(760px, calc(100% - 36px)); max-height: calc(100dvh - 240px); overflow: auto; padding: 18px; color: #eee9df; background: rgba(17, 23, 27, .97); border: 1px solid #7e755f; box-shadow: 0 12px 30px #0009; }
+.quest-journal h2 { font-size: 17px; margin: 0 0 12px; }
+.quest-journal h3 { font-size: 14px; line-height: 1.5; }
+.quest-journal p, .quest-journal label { font-size: 13px; line-height: 1.6; }
+.quest-journal button { display: block; width: 100%; text-align: left; padding: 10px; margin-top: 8px; background: #303b3f; color: #fff5dc; border: 1px solid #87918b; }
+.quest-journal button:disabled { opacity: .55; }
+.quest-journal select { max-width: 100%; background: #19252a; color: white; padding: 8px; }
+.quest-journal input { width: auto; }
+.quest-journal summary { cursor: pointer; margin-top: 16px; font-size: 12px; }
+@media (max-width: 760px) {
+  .campaign-tabs { top: 64px; right: 10px; }
+  .quest-journal, .story-dialogue { bottom: 170px; max-height: calc(100dvh - 280px); width: calc(100% - 20px); padding: 10px; }
+  .story-dialogue { left: 10px; grid-template-columns: 1fr; }
+  .game-shell:has(.campaign-tabs) .action-dock { display: flex; width: 100%; bottom: 8px; overflow-x: auto; padding: 6px; }
+  .game-shell:has(.campaign-tabs) .action-dock button { min-width: 110px; }
+  .game-shell:has(.campaign-tabs) .touch-controls { display: none; }
+}

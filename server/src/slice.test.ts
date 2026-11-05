@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MemoryStore, GameClock } from './store.js';
 import { Simulation } from './simulation.js';
+import { advanceQuest } from './campaign.js';
 import { advanceStory, choices } from './story.js';
 import { app, store } from './index.js';
 afterAll(() => app.close());
@@ -21,8 +22,11 @@ it('persists and restores private ownership, progress, runtime and moderation', 
 for (const path of ['street', 'army']) for (const rescue of ['save_neighbors', 'secure_ledger']) for (const ending of ['publish_names', 'protect_witnesses']) it(`executes ${path}/${rescue}/${ending} once with consequences`, () => {
   const m = new MemoryStore(); const c = m.createCharacter(input);
   expect(advanceStory(c, 'open_record').ok).toBe(false); c.act = 2;
-  for (const choice of ['open_record', path, 'verify_copy', rescue, 'hear_witnesses', ending]) expect(advanceStory(c, choice).ok).toBe(true);
-  expect(c.story?.events).toHaveLength(6); expect(c.story?.path).toBe(path); expect(choices(c)).toEqual([]); expect(c.act).toBe(3);
+  for (const choice of ['open_record', path]) expect(advanceStory(c, choice).ok).toBe(true);
+  const route = path === 'street' ? [['regulars', ['play', 'return-wallet', 'courier']], ['the-flip', ['inspect', 'disclose', 'return']]] : [['the-score', ['review', '30', 'rebalance', 'source']], ['first-rotation', ['together', '28', 'decline', 'complete-record']]];
+  for (const [quest, decisions] of route) for (const choice of decisions!) expect(advanceQuest(c, { quest, choice }, new Date().toISOString(), () => 'test-seed').ok).toBe(true);
+  for (const choice of ['verify_copy', rescue, 'hear_witnesses', ending, 'return_tuesday', 'release_record']) expect(advanceStory(c, choice).ok).toBe(true);
+  expect(c.story?.events).toHaveLength(8); expect(c.story?.path).toBe(path); expect(choices(c)).toEqual([]); expect(c.act).toBe(3);
   expect(c.inventory.includes('verified-ledger')).toBe(rescue === 'secure_ledger');
   expect(advanceStory(c, ending).ok).toBe(false);
 });
