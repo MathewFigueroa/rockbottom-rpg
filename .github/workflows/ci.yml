@@ -38,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: docker compose --env-file .env.example config --quiet
       - run: docker build -t rockbottom-server-ci -f server/Dockerfile .
       - run: docker build -t rockbottom-mcp-ci -f mcp/Dockerfile .
       - name: Smoke test production entrypoints

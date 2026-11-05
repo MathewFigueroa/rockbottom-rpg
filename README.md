@@ -1,216 +1,84 @@
-> **Review build:** [playable campaign, model setup, PR order and release boundaries](docs/RELEASE_STATUS.md). The game is designed for model-driven choices witnessed live by a spectator. Nothing in the review stack has been merged or deployed.
+# ROCKBOTTOM: Second Wind
 
-> **Continuation:** [PostgreSQL persistence and recovery](docs/POSTGRES.md) · [Acts 2–3 playable campaign and story](docs/ACTS_TWO_THREE.md). These changes are stacked PRs awaiting review.
+An AI-native civic-noir RPG. Give a model a character and a viewer brief, then witness the life it chooses through a live spectator feed. You can also play manually.
 
-> **Second Wind vertical slice:** owner-protected actions, optional durable saves, and The Second Copy branching campaign are documented in [implementation and remaining milestones](docs/SECOND_WIND_MILESTONES.md). This branch is not a complete public-hosting release.
+You wake beneath Route 9 with four dollars, a creased photograph of your child, and no indoor bed. Recovery means food, work, housing and showing up. Later, two evacuation lists pull you into an inquiry where every witness protected someone—and left something out.
 
-# ROCKBOTTOM: Second Wind — The world's first AI-native RPG. Play it yourself, or plug in your agent and watch it climb.
+**Review build:** the playable campaign and follow-up systems are on stacked, unmerged PRs. Nothing has been deployed by this work. To run this version, use the review branch below; `main` does not yet contain the stack. See [release status](docs/RELEASE_STATUS.md) for scope and public-hosting boundaries.
 
 ![ROCKBOTTOM title screen](docs/screenshots/01-title.png)
 
-You wake beneath Route 9 with four dollars, a creased photograph of your child, and no place left to fall. Work the street economy or enlist for reliable pay and real deployment risk while you rebuild housing, income, sobriety, and trust. Every decision belongs to you, or to an AI agent you connect through MCP while the server keeps time and spectators watch live.
+## The game today
 
-ROCKBOTTOM is an open-core, server-authoritative browser RPG built with TypeScript, Fastify, React, PixiJS, Prisma contracts, WebSockets, and pnpm workspaces. The engine is MIT licensed; self-hosted shards run all gameplay capabilities free.
+- **A complete parent-to-archive campaign.** Eight nonlinear inquiry scenes, seven quest chains, earned housing, a five-factor custody hearing and the adult child's final record. Street and Army decisions have different obligations, risks and consequences.
+- **Recurring lives between story choices.** Timed Army assessment and training, ranked pay, child support, service terms, deployments, promotions and persistent casualties. Street markets have shared stock, inspected/repaired goods, courier work and evidence-based police, jail and legal-aid outcomes.
+- **Four branching character arcs.** Marcus's recovery, Nia's crew treasury and informant consequences, Sam's repair and trust, and the public fund's household/community dilemma.
+- **Model agency with real consequences.** A private viewer brief, exact needs-aware action contracts, persistent continuity notes and optional public decision summaries/scene interpretations. The runner detects stalled routines; recycling is not a work shift, and extra sleep cannot replace one. It re-prompts invalid choices and stops after three consecutive invalid/rejected choices rather than substituting a canned action.
+- **Live spectatorship.** Actual actions, countdown, objective, family/resource context, earned evidence and local “make your own call” priorities. A spectator's priority does not steer the agent. Private notes, viewer briefs, tokens and direct/crew chat remain outside the public feed.
+- **Durable, authoritative state.** Local file saves or transactional PostgreSQL snapshots, separate browser ownership and agent credentials, recovery codes and token rotation. The server owns money, timing, evidence, court orders and seeded outcomes.
 
-## Screenshots
+Seeds vary encounter order and conditions; model choices vary the trajectory. Different models can still make the same choices. Public model prose is labeled interpretation, not an authoritative fact or private reasoning transcript.
 
-Every image below is a real Chromium capture produced by `pnpm screenshots` against the running game, not a mockup.
+## Run locally
 
-<table>
-  <tr>
-    <td><img src="docs/screenshots/01-title.png" alt="Desktop title screen"><br><sub>Title screen, desktop</sub></td>
-    <td><img src="docs/screenshots/01-title-mobile.png" alt="Phone title screen"><br><sub>Title screen, phone</sub></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/02-character-creation.png" alt="Desktop character creation"><br><sub>Character creation and the locked photograph</sub></td>
-    <td><img src="docs/screenshots/02-character-creation-mobile.png" alt="Phone character creation"><br><sub>Character creation at 390 × 844</sub></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/03-overpass-dawn.png" alt="Route 9 overpass at dawn"><br><sub>Act 1 opens beneath Route 9</sub></td>
-    <td><img src="docs/screenshots/03-overpass-dawn-mobile.png" alt="Route 9 overpass on a phone"><br><sub>The opening scene with touch controls</sub></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/04-day-labor.png" alt="Day-labor shift"><br><sub>A timed shift at the day-labor lot</sub></td>
-    <td><img src="docs/screenshots/05-dialogue-sam.png" alt="Dialogue with Sam Okafor"><br><sub>Sam's first pawn-shop lesson</sub></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/06-city-night.png" alt="Market Row at night"><br><sub>Market Row after the night window opens</sub></td>
-    <td><img src="docs/screenshots/07-custody-hearing.png" alt="Custody hearing factor breakdown"><br><sub>Judge Whitfield weighs the five custody factors</sub></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/08-agent-mode.png" alt="Live AI agent spectator view"><br><sub>A rule agent with decision clock and action ticker</sub></td>
-    <td><img src="docs/screenshots/09-crew-map.png" alt="Crew territory map"><br><sub>Riverfront crew territory and shared stash</sub></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/10-admin-clock.png" alt="Admin world clock controls"><br><sub>Authoritative clock controls in Warden</sub></td>
-    <td><img src="docs/screenshots/11-mobile-touch.png" alt="Mobile game with virtual controls"><br><sub>Phone play with joystick and context action</sub></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/12-army-recruiter.png" alt="Fort Halvern recruitment center"><br><sub>The recruitment path begins at Fort Halvern</sub></td>
-    <td><img src="docs/screenshots/03-overpass-dawn.png" alt="Halvern city renderer"><br><sub>Procedural PixiJS world rendering</sub></td>
-  </tr>
-</table>
-
-## What ships
-
-| | Feature | What it does |
-|---|---|---|
-| ◇ | AI agent play via MCP | `observe`, `act`, `wait_for_decision`, story state, chat, and persistent plan notes per character. |
-| ◷ | Decision-gated token economy | One action per window, six observations per minute, no calls during travel, work, sleep, training, or transit. |
-| ◎ | Manual and touch play | Keyboard/pointer controls on desktop, 44px touch targets, virtual joystick, and context action on phones. |
-| ⚑ | Crews and proximity | Shared stash, diplomacy, territory tags, proximity chat, spectator feeds, and moderation evidence contracts. |
-| ☼ | Real-time world clock | Pause, set, jump, or scale the server-authoritative clock from 1× to 60×. |
-| ▦ | Content packs | Five validated, dependency-aware packs hold Halvern, Acts 1-3, 24 tapes, dialogue, quests, and endings. |
-| ⌂ | Self-hosting | Docker Compose, Caddy HTTPS, Postgres/Redis services, health checks, backups, and private-shard guide. |
-| ♲ | Deterministic art | `pnpm assets` regenerates 79 cohesive pixel assets without external art or network calls. |
-
-## Quickstart
-
-Requires Node.js 22+, Corepack, and a modern Chromium, Firefox, or Safari browser. Local development is four commands:
+Requires Node.js 22+, Corepack and pnpm 11.13.1.
 
 ```bash
-git clone https://github.com/MathewFigueroa/rockbottom-rpg.git
+git clone --branch codex/current-readme https://github.com/MathewFigueroa/rockbottom-rpg.git
 cd rockbottom-rpg
-corepack enable && corepack prepare pnpm@11.13.1 --activate
-pnpm install && pnpm assets && pnpm dev
+corepack enable
+corepack prepare pnpm@11.13.1 --activate
+pnpm install --frozen-lockfile
+SAVE_PATH="$PWD/data/world.json" pnpm dev
 ```
 
-Open:
+The saved world lives under the ignored `data/` directory. Without `SAVE_PATH` or a PostgreSQL `DATABASE_URL`, development state is memory-only. `.env.example` documents settings; `pnpm dev` does not automatically load that file into your shell.
 
-- Game: `http://localhost:5173`
-- Warden admin: `http://localhost:5174/admin/` (development defaults: `warden` / `change-me-now`)
-- Game API health: `http://localhost:3000/health`
-- MCP SSE health: `http://localhost:3001/health`
+| Local page | Address |
+|---|---|
+| Game | [localhost:5173](http://localhost:5173) |
+| Warden admin | [localhost:5174/admin/](http://localhost:5174/admin/) |
+| Game health | [localhost:3000/health](http://localhost:3000/health) |
+| MCP SSE health | [localhost:3001/health](http://localhost:3001/health) |
 
-### Hostinger VPS in eight steps
+Development admin defaults are `warden` / `change-me-now`. Production requires explicit credentials, a session secret, client origin and durable storage. Generated pixel assets are committed; `pnpm assets` regenerates them when needed.
 
-Use an Ubuntu 22.04 or 24.04 VPS with at least 2 vCPU and 8GB RAM. Point `play.example.com` at the server first.
+## Watch a model play
 
-1. Connect:
+1. Create a character and write the story preferences you want the model to consider.
+2. Open the owner menu and choose **Agent**. Enable public summaries if you want the model's short explanations and scene interpretations visible.
+3. Reveal the character's agent token and provide it privately to the runner or an MCP client. Save a recovery code from the owner menu for future browser recovery.
+4. Open **Open spectator view**, or visit `http://localhost:5173/watch/CHARACTER_ID`.
 
-   ```bash
-   read -rp "VPS IP: " VPS_IP && ssh "root@$VPS_IP"
-   ```
-
-2. Install Docker and Git:
-
-   ```bash
-   apt update && apt install -y git ca-certificates curl ufw && curl -fsSL https://get.docker.com | sh
-   ```
-
-3. Clone the repository:
-
-   ```bash
-   git clone https://github.com/MathewFigueroa/rockbottom-rpg.git && cd rockbottom-rpg
-   ```
-
-4. Create secrets:
-
-   ```bash
-   cp .env.example .env && printf '\nDOMAIN=play.example.com\nPOSTGRES_PASSWORD=%s\nADMIN_SESSION_SECRET=%s\n' "$(openssl rand -hex 24)" "$(openssl rand -base64 36)" >> .env
-   ```
-
-5. Set `ADMIN_PASSWORD` and review the domain:
-
-   ```bash
-   nano .env
-   ```
-
-6. Open SSH, HTTP, and HTTPS:
-
-   ```bash
-   ufw allow OpenSSH && ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 443/udp && ufw --force enable
-   ```
-
-7. Build and start:
-
-   ```bash
-   docker compose up -d --build
-   ```
-
-8. Verify every container and the public route:
-
-   ```bash
-   docker compose ps && curl -fsS https://play.example.com/health
-   ```
-
-Only ports 80 and 443 are public. Caddy sends `/api/*`, `/health`, and `/ws/*` to the game server, `/mcp/*` to the MCP bridge, `/admin/*` to Warden, and everything else to the browser client:
-
-```caddyfile
-play.example.com {
-  encode zstd gzip
-  handle /api/* { reverse_proxy server:3000 }
-  handle /health { reverse_proxy server:3000 }
-  handle /ws/* { reverse_proxy server:3000 }
-  handle_path /mcp/* { reverse_proxy mcp:3001 }
-  handle /admin/* { reverse_proxy admin:80 }
-  handle { reverse_proxy client:80 }
-}
-```
-
-See [PRIVATE_RENTAL.md](PRIVATE_RENTAL.md) for backups, updates, privacy, operations, and pack deployment.
-
-## How to play
-
-### Desktop
-
-Use the numbered action dock with pointer or number keys. Open the pause menu from the top-right button to switch between Manual and Agent control, reveal the character token, or open the spectator URL. Dialogue choices are keyboard-focusable and carry visible number hints.
-
-### Phone
-
-Move with the lower-left virtual joystick. The lower-right Action button chooses the context action shown by the current objective. Needs and resources stay in the compact top rail; the active objective sits above the controls so it never blocks movement.
-
-### Survive before you optimize
-
-Hunger, energy, hygiene, and morale reduce earnings and skill-check performance when neglected, but they never cause instant death. Eat at Mara's, sleep in a claimed bed, shower when possible, and avoid accepting a shift you are too exhausted to finish.
-
-Cash buys food, transit, rent, bail, and gear. GRIT buys skill levels and perks; it comes from consistent shifts, sober days, shelter streaks, objectives, witnessed help, and surviving deployments rather than repeated violence. HEAT changes police attention and when another high-HEAT player can engage you outside normal PvP areas.
-
-### Work and housing
-
-The first reliable money comes from recycling, day labor, busking, courier work, and Sam's pawn flips. The housing ladder is underpass → tent → shelter bed → SRO → studio → two-bedroom. Better housing improves need recovery and custody evidence; a two-bedroom is the first fully custody-eligible home.
-
-### Custody
-
-Hearings occur every 30 game days. Judge Whitfield weighs housing (30%), consistent income (25%), record (20%), sobriety (15%), and visit attendance (10%). Orders progress from supervised visits to unsupervised days, weekends, and shared custody. The interface shows each factor before the order; no invisible morality score replaces the record.
-
-### Two paths, no class lock
-
-The streets line builds reputation, trade margins, crews, and criminal risk. The Army line offers weekly pay, an automatic child-support allotment, benefits after 60 game days, and deployments with visible, seeded casualty odds. You can change paths; the clock and consequences continue.
-
-## Hook up your AI
-
-Create a character, open Pause, switch to **Agent**, and reveal the per-character `rb_…` token. The token controls only that character. Never put it in a spectator URL or commit it.
-
-Build the bridge:
+The provider-neutral runner works with a chat-completions-compatible local or hosted model endpoint:
 
 ```bash
-pnpm --filter @rockbottom/mcp build
+GAME_SERVER_URL=http://localhost:3000 \
+MODEL_BASE_URL=http://localhost:11434/v1 \
+MODEL_NAME=your-installed-model \
+ROCKBOTTOM_AGENT_TOKEN=your-character-token \
+pnpm --filter @rockbottom/mcp model-agent
 ```
 
-### Ollama first
+The example endpoint is a locally running model service; `pnpm dev` does not install or launch a model. Set `MODEL_API_KEY` only if your endpoint requires it. Hosted providers may charge for requests. Provider compatibility and prose quality vary; the runner expects one JSON action. `MODEL_MAX_TURNS` bounds accepted decisions (default 500). Never commit credentials or put tokens in spectator URLs.
 
-Run the bridge over SSE:
+The runner reads needs, milestones and exact choices before acting. It makes no model calls during action waits, preserves recent-choice feedback and curbs repeated income/maintenance choices when a milestone is available. The model still chooses its path and moral decisions; the server validates every consequence. See [the living story and model contract](docs/LIVING_STORY.md).
+
+### Short spectator waits
+
+New worlds use ten game seconds as the minimum spacing for instantaneous decisions. Work, travel and sleep retain their longer simulated durations.
+
+For a **local development world with exactly one character**, run this in a second terminal:
 
 ```bash
-ROCKBOTTOM_AGENT_TOKEN=rb_your_token MCP_TRANSPORT=sse pnpm --filter @rockbottom/mcp start
+node tools/spectator-pacing.mjs CHARACTER_ID
 ```
 
-Connect an Ollama tool client to `http://localhost:3001/sse` using an `Authorization: Bearer rb_your_token` header, select `llama3.1:8b`, and use this system rule:
+It adjusts the global clock to target roughly **10 real seconds per action wait**, then returns to 1× while the model responds. It preserves game-time deadlines, pay and consequences. Model response time is additional; waits longer than ten game hours can exceed the target at the 3600× clock limit. The helper refuses multi-character worlds and stops if another character joins. Stop it before manually changing the clock; its last clock setting persists until changed in Warden. Saved worlds retain their clock settings.
 
-```text
-You control one ROCKBOTTOM character. Call observe once, think once, call exactly one listed action, then call wait_for_decision. Make no model calls while waiting. Prefer food below 35 hunger, shelter streaks, verified work, low HEAT, and the active story objective.
-```
+### MCP clients
 
-The zero-LLM reference agent uses the same contract and can complete Act 1:
-
-```bash
-ROCKBOTTOM_AGENT_TOKEN=rb_your_token pnpm --filter @rockbottom/mcp rule-agent
-```
-
-### Codex, Claude, and generic MCP clients
-
-Point any stdio MCP client at the built server:
+Build the bridge with `pnpm --filter @rockbottom/mcp build`. A stdio client can launch it with:
 
 ```json
 {
@@ -220,93 +88,81 @@ Point any stdio MCP client at the built server:
       "args": ["/absolute/path/to/rockbottom-rpg/mcp/dist/src/index.js"],
       "env": {
         "GAME_SERVER_URL": "http://localhost:3000",
-        "ROCKBOTTOM_AGENT_TOKEN": "rb_your_character_token"
+        "ROCKBOTTOM_AGENT_TOKEN": "your-character-token"
       }
     }
   }
 }
 ```
 
-The safe loop is `observe → think once → act → wait_for_decision`. The server rejects a second action in one window, returns `retry_at` between decisions, limits observations to six per real minute, parks agents after three missed windows or five repeated failures, and restores the last safe checkpoint after the configured timeout.
+For the development SSE bridge already started by `pnpm dev`, connect to `http://localhost:3001/sse`. Send `Authorization: Bearer <character-token>` on both session setup and message posts. URL tokens and ambient server-token delegation are rejected. Production behind Caddy uses `/mcp/sse`. See [MCP setup and tools](mcp/README.md).
 
-| Pacing | Decisions/hour | Expected model calls/hour | Why |
-|---|---:|---:|---|
-| Default 1× | 20-40 | 40-80 | One reasoning/tool round per decision |
-| Shift and travel heavy | 8-20 | 16-40 | Waiting is local and makes zero calls |
-| 60× admin QA | 40-80 | 80-160 | Intended for tests and demos |
-| Rule agent | any | 0 | No model is used |
+## Play manually
 
-More examples and transport details live in [mcp/README.md](mcp/README.md).
+Use the action dock, keyboard shortcuts and the Story, Quests, Life and Chat panels. On smaller screens, scroll the available action panels. The current objective tells you which milestone is still missing.
 
-## Spectate
+Act 1 requires your first $50, an indoor bed, seven bed days, four actual paid shifts and the supervised visit. Recycling earns money; it does not count as a work shift. Sleep restores energy; repeated nights do not replace employment. Later choices unlock the Street/Army investigation, housing and the separate custody order. The authored hearing weighs housing, income consistency, record, sobriety and visitation; it is not an automatic recurring hearing every thirty elapsed days.
 
-Share a read-only character URL:
+Police cases require evidence of an offense. Poverty or HEAT alone does not produce a charge. Deployments display permanent-death risk and require explicit consent. The archive can interpret a life; it cannot undo a recorded casualty or rewrite the parent's past.
 
-```text
-https://play.example.com/watch/CHARACTER_ID
+The rendered city accompanies menu-driven actions. General free movement, collision, real-time combat and PvP remain expansion work; older screenshot controls and illustrative scenes do not establish those mechanics.
+
+## Persistence and hosting
+
+For PostgreSQL, set `DATABASE_URL`, run `pnpm --filter @rockbottom/server db:migrate`, then start the server. See [PostgreSQL setup, import, backups and restore](docs/POSTGRES.md). Use an isolated database for tests.
+
+The runtime uses parameterized node-postgres queries and a transactionally saved JSONB world. It is **one authoritative simulation process** with an advisory writer lock. Prisma schemas are unused scaffolding. Redis is present in Compose for future infrastructure, not implemented runtime fan-out.
+
+The Compose template includes Caddy, client, admin, server, MCP, PostgreSQL, Redis and a one-shot migration service. Before hosting, copy `.env.example` to `.env`, set the domain and unique database/admin/session secrets, and review [release boundaries](docs/RELEASE_STATUS.md) and [operations](PRIVATE_RENTAL.md).
+
+```bash
+docker compose --env-file .env.example config --quiet  # validate the template only
+docker compose up -d --build                         # uses your reviewed .env
 ```
 
-The view shows the live Pixi world, submitted-action ticker, decision countdown, spectator count, STUCK state, and plan notes only when the character owner opts in. Agent tokens never appear in spectator data.
+Running a validated container image is not a public-release approval. TLS, backup/restore drills, capacity, retention and editorial model playtests remain operator responsibilities.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  Manual["Manual browser player"] --> Client["React + PixiJS client"]
-  Touch["Phone touch player"] --> Client
-  Agent["Local or hosted AI"] --> MCP["MCP stdio / SSE bridge"]
-  Watch["Spectator browser"] --> WS["Read-only WebSocket feed"]
-  Admin["Warden admin"] --> API["Fastify agent/admin API"]
-  Client --> API
-  MCP --> API
-  WS --> Sim["Server-authoritative simulation"]
-  API --> Sim
-  Sim --> Clock["1×-60× game clock"]
-  Sim --> Store["Repository interface"]
-  Store --> Memory["In-memory development fallback"]
-  Store --> Prisma["Prisma SQLite / Postgres contracts"]
-  Sim --> Packs["Validated content packs"]
-  Sim --> Redis["Optional Redis fan-out"]
+  Player[Manual player] --> Browser[React + PixiJS]
+  Model[Local or hosted model] --> Runner[Model runner or MCP bridge]
+  Browser --> API[Fastify API]
+  Runner --> API
+  API --> Simulation[Authoritative simulation + clock]
+  Simulation --> Store[Local file or PostgreSQL JSONB]
+  Simulation --> Content[Typed campaign + validated packs]
+  Simulation --> Feed[Read-only WebSocket feed]
+  Feed --> Spectator[Live spectator]
 ```
 
-The server owns money, time, quest progress, custody factors, agent windows, stuck recovery, moderation flags, and all random outcomes. Clients render state and submit intentions; they cannot award themselves cash, skip a timer, reroll a casualty, or call outside an agent decision window.
+Five in-repository packs contain Halvern, Acts 1–3, dialogue, recordings and visual content. The typed authored campaign implements the supported conditions and consequences; arbitrary third-party JSON expressions are not a general executable scripting engine.
 
-## Content packs
-
-Five packs ship in-repo:
-
-- `base-city`
-- `act1-thefloor`
-- `act2-streets`
-- `act2-army`
-- `act3-theframe`
-
-Read [packs/SCHEMA.md](packs/SCHEMA.md) for every field, examples, dialogue nodes, quest stages, events, tapes, endings, maps, assets, dependencies, and the validation checklist.
-
-## Verification
+## Checks and documentation
 
 ```bash
 pnpm typecheck
 pnpm build
 pnpm test:unit
+pnpm exec playwright install chromium
 pnpm test:e2e
-pnpm screenshots
-docker compose config
 ```
 
-The Playwright suite completes Act 1 manually, abuses the MCP decision gates, parks broken agents, verifies two-client crew/chat/report behavior, collects all 24 tapes, renders the frame plus Forgiveness and Honor endings, checks the clock and five packs, and generates the README gallery.
+CI checks types, unit/integration tests, browser flows, production dependency audit, PostgreSQL behavior, production container entrypoints and Compose configuration. Tests cover distinct complete campaign outcomes, Army service, street/legal consequences, privacy, recovery and model-loop regressions. Unit model tests use a stub provider; they do not certify every model. `pnpm screenshots` regenerates the legacy visual gallery, including illustrative demo scenes.
 
-## Roadmap
+| Guide | Contents |
+|---|---|
+| [Release status](docs/RELEASE_STATUS.md) | Supported game, review order and deployment boundaries |
+| [Living story](docs/LIVING_STORY.md) | Character arcs, viewer briefs, model contracts and loop prevention |
+| [Acts 2–3](docs/ACTS_TWO_THREE.md) | Branching quests, custody and the archive |
+| [Army service](docs/ARMY_SERVICE.md) | Assessment, training and recurring service |
+| [Street systems](docs/STREETS_AND_LAW.md) | Markets, courier work, evidence and legal outcomes |
+| [PostgreSQL](docs/POSTGRES.md) | Migrations, file imports, backups and restore |
+| [Remaining work](TODO.md) | Public-release checks and future expansions |
 
-- Production voice moderation model and real 30-second Opus evidence ring buffer
-- Optional mobile PWA install while preserving zero-install browser play
-- Shard federation with explicit moderation and privacy boundaries
-- Signed pack marketplace with compatibility and safety review
+Review in order: [#1](https://github.com/MathewFigueroa/rockbottom-rpg/pull/1) → [#2](https://github.com/MathewFigueroa/rockbottom-rpg/pull/2) → [#3](https://github.com/MathewFigueroa/rockbottom-rpg/pull/3) → [#4](https://github.com/MathewFigueroa/rockbottom-rpg/pull/4) → [#5](https://github.com/MathewFigueroa/rockbottom-rpg/pull/5) → [#6](https://github.com/MathewFigueroa/rockbottom-rpg/pull/6) → [#7](https://github.com/MathewFigueroa/rockbottom-rpg/pull/7) → [#8](https://github.com/MathewFigueroa/rockbottom-rpg/pull/8) → [#9](https://github.com/MathewFigueroa/rockbottom-rpg/pull/9), then the README follow-up on this branch. All remain unmerged pending approval.
 
-The current clean-interface follow-ups are registered with exact file paths in [TODO.md](TODO.md).
+## License
 
-## Community and license
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before sending a change and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before joining project spaces.
-
-The engine is available under the [MIT License](LICENSE). Hosted-service subscriptions, when implemented, may gate official hosting capacity, extra concurrent agent slots, broadcasts above five viewers, and cosmetics only. They never gate power, progression, outcomes, or self-hosted play.
+[MIT](LICENSE). Read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before contributing.

@@ -16,7 +16,11 @@ Two deterministic policy playthroughs now start with fresh characters, execute A
 4. PR #4: full training and recurring Army service.
 5. PR #5: markets, scheduled courier work, police/jail/legal aid.
 6. PR #6: living character arcs, private viewer briefs, optional agent interpretations, earned records and model runner.
-7. Release reliability PR: authenticated MCP sessions, private chat boundaries, moderation appeals, owner recovery/token rotation, request cancellation and final playthrough tests.
+7. PR #7: authenticated MCP sessions, private chat boundaries, moderation appeals, owner recovery/token rotation, request cancellation and final playthrough tests.
+
+8. PR #8: shorter local spectator waits, evidence exploration and story context.
+9. PR #9: needs-aware agent menus, counted progress and stalled-routine feedback.
+10. README follow-up: current setup documentation, repaired Compose service layout and configuration validation.
 
 All remain unmerged until the owner approves. The branches are stacked in that order; each PR’s base narrows its review diff to one milestone. No deployment or merge has been performed.
 

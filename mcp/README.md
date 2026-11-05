@@ -1,65 +1,68 @@
-# ROCKBOTTOM MCP agent bridge
+# ROCKBOTTOM model connections
 
-The bridge exposes one character through six small tools: `observe`, `act`, `wait_for_decision`, `get_story_state`, `chat`, and `plan_note`. The game server, not the client or agent, enforces one action per decision window and six observations per real minute.
+The server owns actions and consequences. The bridge exposes `observe`, `act`, `wait_for_decision`, `introduce_agent`, `get_story_state`, `chat`, `read_chat` and `plan_note` for one character.
 
-## Reference loop
+## Provider-neutral model runner
 
-1. Call `observe()` once.
-2. Think once and choose one listed action.
-3. Call `act(action, params)` once.
-4. Call `wait_for_decision()` and make zero model calls while it blocks.
-5. Repeat.
-
-Travel, labor shifts, sleep, training, and deployment transit are token choke points. The bridge waits locally until the simulation asks for another decision.
-
-## Ollama first: llama3.1 8B
-
-Create a character, pause, switch to Agent, reveal the character token, then start the SSE bridge:
+Create a character, choose Agent mode in the owner menu and supply its agent token privately:
 
 ```bash
-ROCKBOTTOM_AGENT_TOKEN=rb_your_token MCP_TRANSPORT=sse pnpm --filter @rockbottom/mcp start
+GAME_SERVER_URL=http://localhost:3000 \
+MODEL_BASE_URL=http://localhost:11434/v1 \
+MODEL_NAME=your-installed-model \
+ROCKBOTTOM_AGENT_TOKEN=your-character-token \
+pnpm --filter @rockbottom/mcp model-agent
 ```
 
-Run Ollama and give the model this system rule:
+A chat-completions-compatible model service must already be running. Set `MODEL_API_KEY` if that service requires it. `MODEL_MAX_TURNS` defaults to 500 accepted decisions. Hosted requests may incur provider charges; compatibility and interpretation quality vary by model.
 
-```text
-You control one ROCKBOTTOM character. Call observe once, choose exactly one available action, call act once, then call wait_for_decision. Never poll observe while waiting. Prefer food below 35 hunger, shelter streaks, verified work, low HEAT, and current story objectives.
-```
+The runner reads the exact needs-aware `decision_context` menu, validates model selections, retains recent successful choices and re-prompts stalled routines. Food and recovery are distinct from paid shifts and story milestones. Three consecutive invalid/rejected choices stop the runner with an error; it does not choose an action for the model. Waiting makes no model calls. See [the complete model contract](../docs/LIVING_STORY.md).
 
-For a no-model smoke test:
+## Stdio MCP client
 
 ```bash
-ROCKBOTTOM_AGENT_TOKEN=rb_your_token pnpm --filter @rockbottom/mcp rule-agent
+pnpm --filter @rockbottom/mcp build
 ```
 
-## Flagship API clients
-
-Generic MCP clients and Codex can launch the stdio server with this configuration. Claude Desktop accepts the same `mcpServers` object in its desktop configuration.
+Example configuration:
 
 ```json
 {
   "mcpServers": {
     "rockbottom": {
       "command": "node",
-      "args": ["/absolute/path/to/rockbottom-rpg/mcp/dist/index.js"],
+      "args": ["/absolute/path/to/rockbottom-rpg/mcp/dist/src/index.js"],
       "env": {
         "GAME_SERVER_URL": "http://localhost:3000",
-        "ROCKBOTTOM_AGENT_TOKEN": "rb_your_character_token"
+        "ROCKBOTTOM_AGENT_TOKEN": "your-character-token"
       }
     }
   }
 }
 ```
 
-The token belongs to one character, is generated at character creation, and can be rotated by a shard administrator. Do not put it in source control or spectator URLs.
+A client should call `get_story_state`, choose an exact available action/params, submit `act`, then use `wait_for_decision` without model calls during the wait. `observe` supplies a compact view and is limited to six calls per real minute. `get_story_state` includes the private viewer brief, needs, action contracts, discovered recordings and continuity notes. Optional public summaries are interpretations, not private reasoning or authoritative facts.
 
-## Expected calls and cost
+The provider-neutral runner contains the progress guard. A custom MCP client must implement its own needs/progress policy using the same state contracts; the server still validates all gameplay mechanics.
 
-| Pacing | Decisions/hour | Model calls/hour | Notes |
-|---|---:|---:|---|
-| Default 1x world | 20-40 | 40-80 | One reasoning call plus one tool round per decision |
-| Travel/shift heavy | 8-20 | 16-40 | Waiting is local and free |
-| 60x admin test | 40-80 | 80-160 | Intended for QA, not unattended paid agents |
-| Rule agent | any | 0 | Deterministic TypeScript, no LLM |
+## SSE transport
 
-Actual billing depends on the chosen model and context size. `observe()` is hard-capped at 2KB, and only the newest 20 short plan notes persist.
+`pnpm dev` already starts the development bridge. To start it separately after building:
+
+```bash
+MCP_TRANSPORT=sse GAME_SERVER_URL=http://localhost:3000 pnpm --filter @rockbottom/mcp start
+```
+
+Connect to `http://localhost:3001/sse`, sending `Authorization: Bearer <character-token>` on both setup and message posts. Credentials in URLs and ambient server-token delegation are rejected. Each session is bound to its opening credential. Local binding defaults to loopback; allowed hosts/origins, session limits, request limits and body size are enforced.
+
+Behind the provided Caddy proxy, connect to `https://YOUR_DOMAIN/mcp/sse`. Docker advertises the `/mcp` message prefix and explicitly binds the private service interface. Change `MCP_ALLOWED_HOSTS` and `MCP_ALLOWED_ORIGINS` for your reviewed domain configuration.
+
+Owner credentials are separate from agent tokens. The browser owner can rotate an agent token or create a recovery code from the owner menu. Never commit tokens or put them in spectator links. Public spectator state excludes private notes and viewer briefs; direct/crew chat has participant checks.
+
+## Reference smoke agent
+
+```bash
+ROCKBOTTOM_AGENT_TOKEN=your-character-token pnpm --filter @rockbottom/mcp rule-agent
+```
+
+This is a deterministic Act 1 reference policy, not a model or a complete story agent. It makes zero model calls. For the local single-character ten-second spectator helper, see [the main README](../README.md#short-spectator-waits).
