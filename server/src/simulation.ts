@@ -1,3 +1,6 @@
+import { awardRecords } from "./records.js";
+import { socialAction, settleSocial } from "./social.js";
+import { narrate } from "./narrative.js";
 import { streetAction, settleStreet } from "./streets.js";
 import { armyAction, settleArmy } from "./army.js";
 import { randomBytes } from "node:crypto";
@@ -34,6 +37,7 @@ export class Simulation {
     const seed = () => this.store.runtime(character.id).randomSeed ??= randomBytes(32).toString('hex');
     this.store.cashFaucets += settleArmy(character, now, seed()) + settleStreet(character, now);
     if (character.status === 'dead' && action !== 'quest_choice') return { ok: false, message: 'This life has ended.', state: character };
+    settleSocial(character, now);
     if (character.army?.deployed) return { ok: false, message: 'The rotation resolves at the scheduled return.', retry_at: character.army.deployed.due, state: character };
     if (character.street?.courier) return { ok: false, message: 'The courier route is in progress.', retry_at: character.street.courier.due, state: character };
     const jailed = character.street?.legal?.status === 'jailed';
@@ -51,13 +55,18 @@ export class Simulation {
     let message = "Done.";
     let instant = false;
     switch (action as GameAction) {
+      case 'life_action': {
+        const result = socialAction(character, this.store, params, now, seed());
+        if (!result.ok) return this.fail(character, action, result.message);
+        message = result.message; durationMinutes = result.minutes; break;
+      }
       case 'street_action': {
         const result = streetAction(character, this.store, params, now, seed());
         if (!result.ok) return this.fail(character, action, result.message);
         message = result.message; durationMinutes = result.minutes; break;
       }
       case 'army_action': {
-        const result = armyAction(character, params, now);
+        const result = armyAction(character, params, now, this.clock.read().scale);
         if (!result.ok) return this.fail(character, action, result.message);
         message = result.message; durationMinutes = result.minutes; instant = !!result.instant; break;
       }
@@ -182,6 +191,11 @@ export class Simulation {
     const nextGameMs = instant ? now : now + Math.max(spacingGameMs, durationGameMs);
     character.nextDecisionAt = character.street?.legal?.status === 'jailed' ? character.street.legal.hearingAt! : new Date(nextGameMs).toISOString();
     if (character.status !== "dead") character.status = durationMinutes >= 400 ? action === "sleep_shelter" ? "sleeping" : "working" : durationMinutes > 5 ? "traveling" : "active";
+    awardRecords(character);
+    if (!['input', 'answer'].includes(String(params.op))) narrate(character, this.clock.now(), action, message, 'choice', false);
+    if (agent && character.director?.shareSummaries && (typeof params.summary === 'string' || typeof params.scene === 'string')) {
+      character.agentVoice = { at: this.clock.now(), action, modelLabel: character.director.modelLabel, summary: typeof params.summary === 'string' ? params.summary.slice(0, 400) : '', scene: typeof params.scene === 'string' ? params.scene.slice(0, 800) : '' };
+    }
     character.actionLog.unshift({ at: this.clock.now(), action, detail: message });
     character.actionLog = character.actionLog.slice(0, 30);
     if (character.cash > previousCash) this.store.cashFaucets += character.cash - previousCash;
@@ -195,7 +209,7 @@ export class Simulation {
     runtime.observedAt = runtime.observedAt.filter((time) => now - time < 60_000);
     if (runtime.observedAt.length >= 6) return { ok: false, error: "observe_rate_limited", retry_at: new Date(runtime.observedAt[0]! + 60_000).toISOString() };
     runtime.observedAt.push(now);
-    const available = ACTIONS.map((name) => ({ name, params: name === "travel" ? { destination: "string" } : name === "story_decision" ? { choice: choices(character).join("|") } : name === "street_action" ? { op: "get_story_state" } : name === "army_action" ? { op: "get_story_state" } : name === "quest_choice" ? { quest: "get_story_state", choice: "option_id", confirmPermanentDeath: "boolean" } : {} }));
+    const available = ACTIONS.map((name) => ({ name, params: name === "travel" ? { destination: "string" } : name === "story_decision" ? { choice: choices(character).join("|") } : name === "life_action" ? { op: "get_story_state" } : name === "street_action" ? { op: "get_story_state" } : name === "army_action" ? { op: "get_story_state" } : name === "quest_choice" ? { quest: "get_story_state", choice: "option_id", confirmPermanentDeath: "boolean" } : {} }));
     return {
       ok: true,
       character: { id: character.id, name: character.name, mode: character.mode, status: character.status },
@@ -218,6 +232,7 @@ export class Simulation {
     const config = this.clock.read();
     for (const character of this.store.characters.values()) {
       this.store.cashFaucets += settleArmy(character, now, this.store.runtime(character.id).randomSeed ??= randomBytes(32).toString('hex')) + settleStreet(character, now);
+      settleSocial(character, now); awardRecords(character);
       if (character.status === "dead" || character.campaign?.perspective === 'adult-child' || character.army?.deployed || character.army?.phase === 'assessment' || character.army?.drill || character.street?.legal?.status === 'jailed' || character.street?.courier) continue;
       const runtime = this.store.runtime(character.id);
       if (character.status === "stuck" && runtime.stuckSince && now - runtime.stuckSince >= config.stuckResetMinutes * 60_000) {

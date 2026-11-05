@@ -47,3 +47,17 @@ test('market provenance leads through legal aid and restitution to a recorded he
   const owner = await (await page.request.get(`${server}/api/characters/${c.id}`)).json();
   expect(owner.street.legal.outcome).toBe('diversion'); expect(owner.record).toBe(0);
 });
+
+test('spectators see opted-in model interpretations but never the private viewer brief', async ({ page }) => {
+  const c = await (await page.request.post(`${server}/api/characters`, { data: { name: 'Different Model', sex: 'female', childName: 'Riley', childAge: 8, brief: 'PRIVATE SPECTATOR PREFERENCE', shareSummaries: true } })).json();
+  await page.request.post(`${server}/api/characters/${c.id}/mode`, { data: { mode: 'agent' } });
+  const headers = { authorization: `Bearer ${c.agentToken}` };
+  await page.request.post(`${server}/api/agent/identity`, { headers, data: { modelLabel: 'A Different Model' } });
+  const action = await page.request.post(`${server}/api/agent/act`, { headers, data: { action: 'collect_recycling', params: { summary: 'Keep one ordinary promise first.', scene: 'The machine counts cans while the city wakes.' } } }); expect(action.ok()).toBeTruthy();
+  await page.goto(`/watch/${c.id}`);
+  await expect(page.getByRole('heading', { name: 'Agent interpretation' })).toBeVisible();
+  await expect(page.getByText('Keep one ordinary promise first.')).toBeVisible();
+  const watch = await (await page.request.get(`${server}/api/watch/${c.id}`)).json(); expect(JSON.stringify(watch)).not.toContain('PRIVATE SPECTATOR PREFERENCE'); expect(watch.character.cash).toBe(22);
+  await page.request.post(`${server}/api/characters/${c.id}/director`, { data: { brief: 'PRIVATE SPECTATOR PREFERENCE', shareSummaries: false } });
+  await expect(page.getByRole('heading', { name: 'Agent interpretation' })).toHaveCount(0);
+});

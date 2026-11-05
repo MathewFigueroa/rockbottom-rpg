@@ -187,3 +187,9 @@ button:disabled { cursor: wait; opacity: 0.55; }
   .game-shell:has(.campaign-tabs) .action-dock button { min-width: 110px; }
   .game-shell:has(.campaign-tabs) .touch-controls { display: none; }
 }
+.creation-form textarea, .pause-panel textarea { width: 100%; min-height: 75px; padding: 10px; background: #172329; color: #eee8d9; border: 1px solid #7e8a88; font: inherit; }
+.creation-form input[type=checkbox], .pause-panel input[type=checkbox] { width: auto; }
+.agent-voice { margin-top: 20px; padding: 14px; background: #253137; border-left: 2px solid #d5b574; }
+.agent-voice small { color: #c7c5b8; line-height: 1.6; }
+.pause-panel { max-height: 90dvh; overflow: auto; }
+@media (max-width: 760px) { .campaign-tabs { gap: 3px; } .campaign-tabs button { padding: 8px 10px; font-size: 12px; } }

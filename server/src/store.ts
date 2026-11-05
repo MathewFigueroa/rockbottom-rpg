@@ -8,6 +8,8 @@ export interface CharacterCreateInput {
   sex: ParentSex;
   childName: string;
   childAge: number;
+  brief?: string;
+  shareSummaries?: boolean;
 }
 
 interface AgentRuntime {
@@ -28,6 +30,9 @@ export interface Crew {
   feuds: string[];
   tags: string[];
   reputation: number;
+  treasury?: number;
+  allianceRequests?: string[];
+  informants?: Array<{ characterId: string; at: string }>;
 }
 
 export interface ModerationCase {
@@ -97,6 +102,7 @@ export class MemoryStore {
     const now = new Date();
     const character: CharacterState = {
       id,
+      director: { brief: input.brief?.slice(0, 1000) ?? "Let this person become someone through choices. Care, survival, ambition and uncertainty can conflict.", shareSummaries: input.shareSummaries ?? false, modelLabel: "Unspecified agent" },
       name: input.name.trim().slice(0, 24) || "Alex",
       sex: input.sex,
       childName: input.childName.trim().slice(0, 24) || "Riley",

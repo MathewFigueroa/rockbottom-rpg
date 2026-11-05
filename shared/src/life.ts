@@ -23,3 +23,11 @@ export interface StreetState {
   legal?: { id: string; status: 'summons' | 'jailed' | 'released' | 'closed'; evidence: string[]; escrow: number; hearingAt?: string; defender: boolean; called: boolean; outcome?: 'diversion' | 'convicted' };
   communityDays: number; repairedCase?: string;
 }
+
+export interface SocialState {
+  version: 1; completed: string[]; lastEncounter?: string; lastAid?: string;
+  encounter?: { id: string; arc: 'old-friends' | 'crew-up' | 'sam-repair' | 'public-fund'; step: number; variant: number; expires: string; choices: string[] };
+  crewId?: string;
+}
+export interface DirectorState { brief: string; shareSummaries: boolean; modelLabel: string }
+export interface AgentVoice { at: string; action: string; modelLabel: string; summary: string; scene: string }

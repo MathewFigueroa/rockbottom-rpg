@@ -1,4 +1,4 @@
-import type { CharacterState, ControlMode } from "@rockbottom/shared";
+import type { CharacterState, ControlMode, ClockState } from "@rockbottom/shared";
 
 const API = import.meta.env.VITE_API_URL ?? "";
 
@@ -16,6 +16,8 @@ export const api = {
   character: (id: string) => json<CharacterState>(`/api/characters/${id}`),
   action: (id: string, action: string, params: Record<string, unknown> = {}) => json<{ ok: boolean; message: string; state: CharacterState }>(`/api/characters/${id}/action`, { method: "POST", body: JSON.stringify({ action, params }) }),
   mode: (id: string, mode: ControlMode) => json<CharacterState>(`/api/characters/${id}/mode`, { method: "POST", body: JSON.stringify({ mode }) }),
+  records: (id: string) => json<Array<{ id: string; name: string; content: string }>>(`/api/characters/${id}/records`),
+  director: (id: string, input: { brief: string; shareSummaries: boolean }) => json<{ ok: boolean }>(`/api/characters/${id}/director`, { method: "POST", body: JSON.stringify(input) }),
   hearing: (id: string) => json<{ score: number; level: string; factors: Record<string, number> }>(`/api/characters/${id}/hearing`),
-  watch: (id: string) => json<{ character: CharacterState; actions: CharacterState["actionLog"]; planNotes: CharacterState["planNotes"]; spectatorCount: number }>(`/api/watch/${id}`),
+  watch: (id: string) => json<{ clock?: ClockState; character: CharacterState; actions: CharacterState["actionLog"]; planNotes: CharacterState["planNotes"]; spectatorCount: number }>(`/api/watch/${id}`),
 };
