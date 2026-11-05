@@ -1,3 +1,5 @@
+import type { CampaignState } from "./campaign.js";
+export * from "./campaign.js";
 export type ParentSex = "male" | "female";
 export type ControlMode = "manual" | "agent";
 export type HousingTier = "underpass" | "tent" | "shelter" | "sro" | "studio" | "two-bedroom";
@@ -11,6 +13,9 @@ export interface Needs {
 }
 
 export interface CharacterState {
+  campaign?: CampaignState;
+  storyChoices?: string[];
+  campaignView?: CampaignState & { quests: Array<{ id: string; title: string; step: number; total: number; objective: string; options: Array<{ id: string; text: string; blocked?: string; fatalRisk: number }> }> };
   story?: { version: 1; stage: number; path: "street" | "army" | null; choice: string | null; events: Array<{ sequence: number; timeline: string; title: string; text: string }> };
   id: string;
   name: string;
@@ -110,6 +115,7 @@ export const ACTIONS = [
   "enlist",
   "safe_idle",
   "story_decision",
+  "quest_choice",
 ] as const;
 export type GameAction = (typeof ACTIONS)[number];
 
@@ -121,6 +127,8 @@ export const STORY_PROMPTS = [
   "Floodwater threatens Mercy House. Rescue six residents and lose the original ledger, or secure the ledger while Nell evacuates without you. Sam may be hurt helping her. Neither choice can be undone.",
   "Dana, Sam and Vale each withheld part of the record to protect someone. Hear their accounts before deciding what the city may know.",
   "Publish the witness addresses to accelerate the audit, or submit sealed testimony to protect residents at the cost of delay. Custody still depends on sustained care.",
-  "The inquiry continues. Tuesday's visit is still yours to keep.",
+  "The inquiry is on the front page. Tuesday’s visit falls during the audit briefing. Keep the visit, or attend the briefing and accept another absence on the family-court record.",
+  "A lawyer offers to circulate the case file. Release a redacted public record, or keep it within the legal process. Neither choice can unpublish addresses already disclosed.",
+  "The inquiry has become a record. Prepare housing and hear the separate family-court order before entering the adult child’s archive.",
 ] as const;
-export const STORY_CHOICES = [['open_record'], ['street', 'army'], ['verify_copy'], ['save_neighbors', 'secure_ledger'], ['hear_witnesses'], ['publish_names', 'protect_witnesses'], []] as const;
+export const STORY_CHOICES = [['open_record'], ['street', 'army'], ['verify_copy'], ['save_neighbors', 'secure_ledger'], ['hear_witnesses', 'challenge_dana', 'challenge_vale'], ['publish_names', 'protect_witnesses'], ['return_tuesday', 'follow_audit'], ['release_record', 'keep_private'], []] as const;

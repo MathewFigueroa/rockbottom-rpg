@@ -1,3 +1,5 @@
+> **Continuation:** [PostgreSQL persistence and recovery](docs/POSTGRES.md) · [Acts 2–3 playable campaign and story](docs/ACTS_TWO_THREE.md). These changes are stacked PRs awaiting review.
+
 > **Second Wind vertical slice:** owner-protected actions, optional durable saves, and The Second Copy branching campaign are documented in [implementation and remaining milestones](docs/SECOND_WIND_MILESTONES.md). This branch is not a complete public-hosting release.
 
 # ROCKBOTTOM: Second Wind — The world's first AI-native RPG. Play it yourself, or plug in your agent and watch it climb.

@@ -77,6 +77,7 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [visitationOpen, setVisitationOpen] = useState(false);
+  const [campaignPanel, setCampaignPanel] = useState<"story" | "quests">("story");
   const load = useCallback(async () => {
     if (!characterId) return;
     try { setCharacter(await api.character(characterId)); } catch (reason) { setError(reason instanceof Error ? reason.message : "Character unavailable"); }
@@ -86,7 +87,7 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
     if (!character || busy) return;
     if (action === "attend_visitation" && !force) { setVisitationOpen(true); return; }
     setBusy(true);
-    try { const result = await api.action(character.id, action, params); setCharacter({ ...result.state }); setMessage(result.message); } catch (reason) { setMessage(reason instanceof Error ? reason.message : "Action failed"); } finally { setBusy(false); }
+    try { const result = await api.action(character.id, action, params); const updated = await api.character(character.id); setCharacter(updated); setCampaignPanel(updated.storyChoices?.length ? "story" : "quests"); setMessage(["story_decision", "quest_choice"].includes(action) ? "" : result.message); } catch (reason) { setMessage(reason instanceof Error ? reason.message : "Action failed"); } finally { setBusy(false); }
   };
   const setMode = async (mode: ControlMode) => { if (!character) return; setCharacter(await api.mode(character.id, mode)); };
   if (error) return <main className="fatal"><h1>Halvern is out of reach</h1><p>{error}</p><button onClick={onExit}>Return to title</button></main>;
@@ -111,7 +112,9 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
       <aside className="objective-panel"><div className="objective-number">{String(character.questStep + 1).padStart(2, "0")}</div><div><small>ACT {character.act}: {character.act === 1 ? "THE FLOOR" : character.act === 2 ? "THE LADDER" : "THE FRAME"}</small><strong>{character.activeObjective}</strong></div></aside>
       <div className="location-pip"><span>⌖</span>{character.location}</div>
       {message && <button className="toast" onClick={() => setMessage("")}>{message}</button>}
-      {character.act >= 2 && <section className="dialogue-panel" aria-label="Second Wind story"><div><small>{character.story?.events.at(-1)?.timeline ?? 'THE SECOND COPY'}</small><p>{character.story?.events.at(-1)?.text ?? 'A clerk has a question about your signature. Open the record.'}</p><p>{STORY_PROMPTS[character.story?.stage ?? 0]}</p><div className="choice-list">{(STORY_CHOICES[character.story?.stage ?? 0] ?? []).map(choice => <button key={choice} disabled={busy} onClick={() => void act('story_decision', { choice })}>{choice.replaceAll('_', ' ')}</button>)}</div></div></section>}
+      {character.act >= 2 && <nav className="campaign-tabs" aria-label="Campaign view"><button onClick={() => setCampaignPanel("story")} aria-pressed={campaignPanel === "story"}>Story</button><button onClick={() => setCampaignPanel("quests")} aria-pressed={campaignPanel === "quests"}>Quests</button></nav>}
+      {character.act >= 2 && campaignPanel === "story" && <section className="dialogue-panel story-dialogue" aria-label="Second Wind story"><div><small>{character.story?.events.at(-1)?.timeline ?? 'THE SECOND COPY'}</small><p>{character.story?.events.at(-1)?.text ?? 'A clerk has a question about your signature. Open the record.'}</p><p>{STORY_PROMPTS[character.story?.stage ?? 0]}</p><div className="choice-list">{(character.storyChoices ?? []).map(choice => <button key={choice} disabled={busy} onClick={() => void act('story_decision', { choice })}>{choice.replaceAll('_', ' ')}</button>)}</div></div></section>}
+      {character.act >= 2 && campaignPanel === "quests" && <QuestJournal character={character} busy={busy} act={act} />}
       <ActionDock character={character} busy={busy} act={act} />
       <TouchControls onAction={() => void act(recommendedAction(character))} />
       {effectiveScene === "opening" && <OpeningPanel character={character} onClose={() => setMessage("The cart waits east of the pillar.")} />}
@@ -122,11 +125,26 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
       {effectiveScene === "crew" && <CrewOverlay />}
       {effectiveScene === "army" && <ArmyOverlay />}
       {visitationOpen && <VisitationPanel character={character} onComplete={() => { setVisitationOpen(false); void act("attend_visitation", {}, true); }} />}
-      {effectiveScene === "reveal" && <FrameOverlay />}
+      {effectiveScene === "reveal" && !character.story && <FrameOverlay />}
       {(effectiveScene === "forgiveness" || effectiveScene === "honor") && <EndingOverlay ending={effectiveScene} childName={character.childName} />}
       {pause && <PausePanel character={character} onClose={() => setPause(false)} onMode={setMode} onExit={onExit} />}
     </main>
   );
+}
+
+function QuestJournal({ character, busy, act }: { character: CharacterState; busy: boolean; act: (action: string, params?: Record<string, unknown>) => Promise<void> }) {
+  const [confirm, setConfirm] = useState(false);
+  const [selected, setSelected] = useState('');
+  const quests = character.campaignView?.quests ?? [];
+  const quest = quests.find(q => q.id === selected) ?? quests[0];
+  return <aside className="quest-journal" aria-label="Quest journal">
+    <h2>{character.campaign?.perspective === 'adult-child' ? 'The archive' : 'The next foothold'}</h2>
+    {quests.length > 1 && <label>Quest<select aria-label="Active quest" value={quest?.id ?? ''} onChange={e => { setSelected(e.target.value); setConfirm(false); }}>{quests.map(q => <option key={q.id} value={q.id}>{q.title}</option>)}</select></label>}
+    {quest ? <><h3>{quest.title} · {quest.step}/{quest.total}</h3><p>{quest.objective}</p>
+      {quest.options.some(o => o.fatalRisk > 0) && <label><input type="checkbox" checked={confirm} onChange={e => setConfirm(e.target.checked)} />I accept the displayed risk of permanent death for this deployment.</label>}
+      <div>{quest.options.map(o => <button key={o.id} disabled={busy || !!o.blocked || (o.fatalRisk > 0 && !confirm)} title={o.blocked} onClick={() => { setConfirm(false); void act('quest_choice', { quest: quest.id, choice: o.id, confirmPermanentDeath: confirm }); }}>{o.text}{o.blocked ? ` · ${o.blocked}` : ''}</button>)}</div></> : <p>{character.campaign?.ending ?? 'Complete the inquiry decisions above; paid work and rest remain available.'}</p>}
+    <details><summary>Record of consequences</summary>{character.campaign?.events.slice(-6).map(event => <p key={event.sequence}>{event.text}</p>)}</details>
+  </aside>;
 }
 
 function Need({ label, icon, value }: { label: string; icon: string; value: number }) {
@@ -139,9 +157,9 @@ function ActionDock({ character, busy, act }: { character: CharacterState; busy:
     if (character.questStep === 1) return [{ id: "claim_shelter", label: "Claim C-14", icon: "⌂" }, { id: "day_labor", label: "Work a shift", icon: "▰" }, { id: "eat_diner", label: "Eat", icon: "◒" }];
     if (character.questStep === 2) return [{ id: "day_labor", label: "Work a shift", icon: "▰" }, { id: "sleep_shelter", label: "Sleep at shelter", icon: "☾" }, { id: "eat_diner", label: "Eat", icon: "◒" }];
     if (character.questStep === 3) return [{ id: "attend_visitation", label: "Attend visitation", icon: "◇" }, { id: "eat_diner", label: "Eat first", icon: "◒" }];
-    return [{ id: "visit_sam", label: "Street line", icon: "⌁" }, { id: "enlist", label: "Army line", icon: "★" }, { id: "busk", label: "Busk", icon: "♫" }];
+    return [{ id: "day_labor", label: "Work a shift", icon: "▰" }, { id: "sleep_shelter", label: "Sleep indoors", icon: "☾" }, { id: "eat_diner", label: "Eat", icon: "◒" }];
   }, [character.questStep]);
-  return <nav className="action-dock" aria-label="Available actions">{actions.map((action, index) => <button key={action.id} disabled={busy} onClick={() => void act(action.id)}><span>{action.icon}</span><div><small>{index + 1}</small>{action.label}</div></button>)}</nav>;
+  return <nav className="action-dock" aria-label="Available actions">{actions.map((action, index) => <button key={action.id} disabled={busy || character.status === "dead" || character.campaign?.perspective === "adult-child"} onClick={() => void act(action.id)}><span>{action.icon}</span><div><small>{index + 1}</small>{action.label}</div></button>)}</nav>;
 }
 
 function OpeningPanel({ character, onClose }: { character: CharacterState; onClose: () => void }) {

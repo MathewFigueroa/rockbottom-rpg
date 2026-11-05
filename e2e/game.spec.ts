@@ -163,20 +163,60 @@ function chooseRuleAction(state: any) {
   return "safe_idle";
 }
 
-test('Second Copy is playable in the browser and broadcasts revealed scenes', async ({ page }) => {
+test('Second Copy quests lead to the inquiry, housing, real hearing and adult-child frame', async ({ page }) => {
   test.setTimeout(120_000);
   const c = await (await page.request.post(`${server}/api/demo/sam`)).json();
   await page.goto(`/?character=${c.id}&scene=city`);
-  const panel = page.getByRole('region', { name: 'Second Wind story' });
-  for (const choice of ['open record', 'army', 'verify copy', 'save neighbors', 'hear witnesses', 'protect witnesses']) {
+  async function choose(name: string, panel: 'story' | 'quests' = 'story') {
+    await page.getByRole('navigation', { name: 'Campaign view' }).getByRole('button', { name: panel === 'story' ? 'Story' : 'Quests', exact: true }).click();
+    const scope = panel === 'story' ? page.getByRole('region', { name: 'Second Wind story' }) : page.getByRole('complementary', { name: 'Quest journal' });
     const response = page.waitForResponse(r => r.url().endsWith('/action'));
-    await panel.getByRole('button', { name: choice, exact: true }).click();
+    await scope.getByRole('button', { name, exact: true }).click();
     const result = await (await response).json();
-    expect(result.ok).toBe(true);
+    expect(result.ok, result.message).toBe(true);
+    await page.request.post(`${server}/api/admin/clock`, { headers: { 'x-admin-secret': 'dev-admin' }, data: { gameTime: result.state.nextDecisionAt, paused: true } });
+    // Wait until the owner snapshot and available choices refresh before the next input.
+    await expect.poll(async () => page.locator('.quest-journal, .story-dialogue').count()).toBeGreaterThan(0);
+  }
+  await choose('open record'); await choose('army');
+  for (const name of ['Read the terms with Dana', '30 bottles', 'Stop and rebalance the load', 'Request the source and timestamp', 'Carry it together', 'Lock 28% for this placement', 'Decline and stay for the visit', 'File the complete route log']) await choose(name, 'quests');
+  for (const name of ['verify copy', 'save neighbors', 'challenge vale', 'protect witnesses', 'return tuesday', 'release record']) await choose(name);
+  // Earn the deposit through server-authoritative shifts, resting between them.
+  for (const name of ['Work a shift', 'Sleep indoors', 'Work a shift', 'Sleep indoors']) {
+    const response = page.waitForResponse(r => r.url().endsWith('/action'));
+    await page.getByRole('navigation', { name: 'Available actions' }).getByRole('button', { name: new RegExp(name) }).click();
+    const result = await (await response).json(); expect(result.ok).toBe(true);
     await page.request.post(`${server}/api/admin/clock`, { headers: { 'x-admin-secret': 'dev-admin' }, data: { gameTime: result.state.nextDecisionAt, paused: true } });
   }
-  await expect(panel).toContainText('You promise only Tuesday');
+  for (const name of ['Sign the SRO lease · $180', 'Prepare the SRO for inspection', 'Say what you can sustain', 'Hear the family-court order', 'Open the evidence box', 'Mark uncertain scenes honestly', 'Call home']) await choose(name, 'quests');
+  await page.getByRole('navigation', { name: 'Campaign view' }).getByRole('button', { name: 'Quests', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Quest journal' })).toContainText('THE OPEN DOOR');
+  const owner = await (await page.request.get(`${server}/api/characters/${c.id}`)).json();
+  expect(owner.campaign.perspective).toBe('adult-child'); expect(owner.campaign.progress['the-frame']).toBe(3);
   await page.goto(`/watch/${c.id}`);
   await expect(page.getByText('Action ticker')).toBeVisible();
-  await expect(page.locator('.spectator-pane')).toContainText('DAY 30');
+  await expect(page.locator('.spectator-pane')).toContainText('The Frame');
+});
+
+test('mobile quest journal exposes deployment risk and requires explicit consent', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const c = await (await page.request.post(`${server}/api/demo/sam`)).json();
+  async function action(action: string, params: Record<string, unknown>) {
+    const response = await page.request.post(`${server}/api/characters/${c.id}/action`, { data: { action, params } });
+    const result = await response.json(); expect(result.ok, result.message).toBe(true);
+    await page.request.post(`${server}/api/admin/clock`, { headers: { 'x-admin-secret': 'dev-admin' }, data: { gameTime: result.state.nextDecisionAt, paused: true } });
+  }
+  await action('story_decision', { choice: 'open_record' }); await action('story_decision', { choice: 'army' });
+  for (const choice of ['review', '30', 'rebalance', 'source']) await action('quest_choice', { quest: 'the-score', choice });
+  for (const choice of ['together', '28']) await action('quest_choice', { quest: 'first-rotation', choice });
+  await page.goto(`/?character=${c.id}&scene=city`);
+  await page.getByRole('navigation', { name: 'Campaign view' }).getByRole('button', { name: 'Quests', exact: true }).click();
+  const journal = page.getByRole('complementary', { name: 'Quest journal' });
+  await expect(journal).toContainText('ridge 2%, washed road 8%');
+  const deploy = journal.getByRole('button', { name: 'Deploy with the squad · 2% fatal risk', exact: true });
+  await expect(deploy).toBeDisabled();
+  await journal.getByRole('checkbox').check(); await expect(deploy).toBeEnabled();
+  await journal.getByRole('checkbox').uncheck(); await expect(deploy).toBeDisabled();
+  await journal.getByRole('button', { name: 'Decline and stay for the visit', exact: true }).click();
+  await expect(journal).toContainText('missing timestamp');
 });
