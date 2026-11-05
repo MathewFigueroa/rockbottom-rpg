@@ -234,6 +234,11 @@ app.post("/api/agent/chat", async (request, reply) => {
   return result.ok ? result.entry : reply.code(400).send({ error: result.error });
 });
 
+app.get<{ Params: { id: string } }>('/api/watch/:id/records', async (request, reply) => {
+  const character = store.characters.get(request.params.id);
+  return character ? allRecords().filter(record => character.tapes.includes(record.id)) : reply.code(404).send({ error: 'character_not_found' });
+});
+
 app.get<{ Params: { id: string } }>("/api/watch/:id", async (request, reply) => {
   const character = store.characters.get(request.params.id);
   if (!character) return reply.code(404).send({ error: "character_not_found" });

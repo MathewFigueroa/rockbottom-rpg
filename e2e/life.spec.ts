@@ -86,3 +86,23 @@ test('direct chat is readable by its participants and absent from public chat', 
     expect((await page.request.get(`${server}/api/characters/${b.id}/chat`)).status()).toBe(401);
   } finally { await other.close(); }
 });
+
+
+test('spectators explore earned testimony and form their own reading without controlling the actor', async ({ page }) => {
+  const c = await (await page.request.post(`${server}/api/characters`, { data: { name: 'Context Test', sex: 'female', childName: 'Riley', childAge: 8 } })).json();
+  await page.request.post(`${server}/api/characters/${c.id}/action`, { data: { action: 'collect_recycling', params: {} } });
+  const records = await (await page.request.get(`${server}/api/watch/${c.id}/records`)).json();
+  expect(records.map((r: { id: string }) => r.id)).toEqual(['tape-01']);
+  await page.goto(`/watch/${c.id}`);
+  const context = page.getByRole('region', { name: 'Story context' });
+  await expect(context).toContainText('Earn your first $50');
+  await context.getByText('Make your own call', { exact: true }).click();
+  await context.getByRole('button', { name: 'Family', exact: true }).click();
+  await expect(context).toContainText('Your reading: Family');
+  await context.getByText('Open the evidence box', { exact: false }).click();
+  await context.getByText('Microcassette: Route 9', { exact: true }).click();
+  await expect(context).toContainText('SAM OKAFOR, INTERVIEW 1');
+  const after = await (await page.request.get(`${server}/api/watch/${c.id}`)).json();
+  expect(after.character.cash).toBe(22);
+  expect(after.actions).toHaveLength(2);
+});
