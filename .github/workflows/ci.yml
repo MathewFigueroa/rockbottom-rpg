@@ -38,7 +38,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -f server/Dockerfile .
+      - run: docker build -t rockbottom-server-ci -f server/Dockerfile .
+      - run: docker build -t rockbottom-mcp-ci -f mcp/Dockerfile .
+      - name: Smoke test production entrypoints
+        run: |
+          docker run -d --name rb-server-ci -e ADMIN_PASSWORD=ci-only-password -e ADMIN_SESSION_SECRET=ci-only-session-secret-32-characters -e CLIENT_ORIGIN=http://localhost -e SAVE_PATH=/app/data/world.json rockbottom-server-ci
+          docker run -d --name rb-mcp-ci rockbottom-mcp-ci
+          for service in rb-server-ci rb-mcp-ci; do
+            if [ "$service" = rb-server-ci ]; then port=3000; else port=3001; fi
+            docker exec "$service" node -e "(async()=>{for(let i=0;i<40;i++){try{const r=await fetch('http://127.0.0.1:$port/health');if(r.ok)process.exit(0)}catch{}await new Promise(r=>setTimeout(r,250))}process.exit(1)})()"
+          done
+      - name: Clean up test containers
+        if: always()
+        run: docker rm -f rb-server-ci rb-mcp-ci || true
+
 
   postgres:
     runs-on: ubuntu-latest

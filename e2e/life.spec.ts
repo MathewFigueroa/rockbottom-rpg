@@ -61,3 +61,28 @@ test('spectators see opted-in model interpretations but never the private viewer
   await page.request.post(`${server}/api/characters/${c.id}/director`, { data: { brief: 'PRIVATE SPECTATOR PREFERENCE', shareSummaries: false } });
   await expect(page.getByRole('heading', { name: 'Agent interpretation' })).toHaveCount(0);
 });
+
+test('owner recovery restores a saved character through the browser', async ({ page }) => {
+  const c = await (await page.request.post(`${server}/api/characters`, { data: { name: 'Returning Owner', sex: 'female', childName: 'Riley', childAge: 8 } })).json();
+  const code = (await (await page.request.post(`${server}/api/characters/${c.id}/recovery-code`, { data: {} })).json()).recoveryCode;
+  await page.context().clearCookies();
+  await page.goto('/'); await page.getByRole('button', { name: 'Recover saved character' }).click();
+  await page.getByLabel('Saved character link').fill(`http://localhost:5173/watch/${c.id}`); await page.getByLabel('Recovery code', { exact: true }).fill(code);
+  await page.getByRole('button', { name: 'Recover character', exact: true }).click(); await expect(page.getByTestId('game-shell')).toBeVisible();
+  expect((await page.request.get(`${server}/api/characters/${c.id}`)).ok()).toBeTruthy();
+});
+
+test('direct chat is readable by its participants and absent from public chat', async ({ page, browser }) => {
+  const a = await (await page.request.post(`${server}/api/demo/sam`)).json();
+  const other = await browser.newContext();
+  try {
+    const b = await (await other.request.post(`${server}/api/characters`, { data: { name: 'Private Recipient', sex: 'male', childName: 'Riley', childAge: 8 } })).json();
+    await page.goto(`/?character=${a.id}&scene=city`); await page.getByRole('navigation', { name: 'Campaign view' }).getByRole('button', { name: 'Chat', exact: true }).click();
+    const panel = page.getByRole('complementary', { name: 'Chat' }); await panel.getByRole('combobox', { name: 'Channel', exact: true }).selectOption('direct'); await panel.getByRole('combobox', { name: 'Recipient', exact: true }).selectOption(b.id);
+    await panel.getByLabel('Message', { exact: true }).fill('PRIVATE PARTICIPANT MESSAGE'); await panel.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(panel.getByText('PRIVATE PARTICIPANT MESSAGE')).toBeVisible();
+    expect(await (await page.request.get(`${server}/api/chat`)).text()).not.toContain('PRIVATE PARTICIPANT MESSAGE');
+    expect(await (await other.request.get(`${server}/api/characters/${b.id}/chat`)).text()).toContain('PRIVATE PARTICIPANT MESSAGE');
+    expect((await page.request.get(`${server}/api/characters/${b.id}/chat`)).status()).toBe(401);
+  } finally { await other.close(); }
+});

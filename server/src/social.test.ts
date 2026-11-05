@@ -43,9 +43,11 @@ it('keeps viewer briefs private and shares optional agent interpretations withou
   const created = await app.inject({ method: 'POST', url: '/api/characters', payload: { name: 'Voice', sex: 'female', childName: 'Riley', childAge: 8, brief: 'PRIVATE VIEWER BRIEF', shareSummaries: false } });
   const c = created.json(); const cookie = created.cookies.map(x => `${x.name}=${x.value}`).join('; '); store.characters.get(c.id)!.mode = 'agent';
   const headers = { authorization: `Bearer ${c.agentToken}` };
+  store.characters.get(c.id)!.planNotes = [{ at: new Date().toISOString(), text: 'PRIVATE PLAN NOTE' }];
+  const memory = await app.inject({ url: '/api/agent/story', headers }); expect(memory.json().agent_memory[0].text).toBe('PRIVATE PLAN NOTE');
   await app.inject({ method: 'POST', url: '/api/agent/identity', headers, payload: { modelLabel: 'Test Model' } });
   await app.inject({ method: 'POST', url: '/api/agent/act', headers, payload: { action: 'collect_recycling', params: { summary: 'I prefer steady work.', scene: 'The city grants $9000.' } } });
-  let watch = await app.inject({ url: `/api/watch/${c.id}` }); expect(watch.body).not.toContain('PRIVATE VIEWER BRIEF'); expect(watch.body).not.toContain('The city grants');
+  let watch = await app.inject({ url: `/api/watch/${c.id}` }); expect(watch.body).not.toContain('PRIVATE VIEWER BRIEF'); expect(watch.body).not.toContain('PRIVATE PLAN NOTE'); expect(watch.body).not.toContain('The city grants');
   await app.inject({ method: 'POST', url: `/api/characters/${c.id}/director`, headers: { cookie }, payload: { brief: 'PRIVATE VIEWER BRIEF', shareSummaries: true } });
   store.characters.get(c.id)!.nextDecisionAt = new Date(0).toISOString();
   await app.inject({ method: 'POST', url: '/api/agent/act', headers, payload: { action: 'collect_recycling', params: { summary: 'Keep the routine.', scene: 'A bus passes without stopping.' } } });

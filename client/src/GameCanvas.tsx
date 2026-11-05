@@ -9,43 +9,52 @@ interface Props {
 
 export function GameCanvas({ scene, location, night }: Props) {
   const host = useRef<HTMLDivElement>(null);
+  const latest = useRef({ scene, location, night });
+  latest.current = { scene, location, night };
+  const repaint = useRef<(() => void) | undefined>(undefined);
   useEffect(() => {
     const element = host.current;
     if (!element) return;
     let disposed = false;
     let initialized = false;
-    let destroyed = false;
     let app: Application | undefined;
     const destroy = () => {
-      if (!app || !initialized || destroyed) return;
-      destroyed = true;
-      (app as Application & { rbResize?: () => void }).rbResize?.();
+      if (!app || !initialized) return;
+      initialized = false;
       app.destroy(true, { children: true });
     };
+    const paint = () => {
+      if (!app || !initialized || disposed) return;
+      const current = latest.current;
+      app.stage.removeChildren().forEach(child => child.destroy({ children: true }));
+      app.renderer.background.color = current.night ? 0x171d23 : 0x60798a;
+      app.canvas.setAttribute("aria-label", `Top-down view of ${current.location}`);
+      drawWorld(app.stage, app.screen.width, app.screen.height, current.scene, current.night);
+      app.render();
+    };
+    const resize = () => { if (app && initialized && !disposed) { app.resize(); paint(); } };
     const init = async () => {
       app = new Application();
-      await app.init({ resizeTo: element, background: night ? 0x171d23 : 0x60798a, antialias: false, autoDensity: true, resolution: Math.min(2, window.devicePixelRatio) });
+      await app.init({ resizeTo: element, background: 0x60798a, antialias: false, autoDensity: true, resolution: Math.min(2, window.devicePixelRatio) });
       initialized = true;
       if (disposed) { destroy(); return; }
+      // The map has no continuous animation: render only on state/size changes.
+      app.stop();
       element.appendChild(app.canvas);
-      app.canvas.setAttribute("aria-label", `Top-down view of ${location}`);
       app.canvas.setAttribute("role", "img");
-      drawWorld(app.stage, app.screen.width, app.screen.height, scene, night);
-      const resize = () => {
-        if (!app) return;
-        app.stage.removeChildren();
-        drawWorld(app.stage, app.screen.width, app.screen.height, scene, night);
-      };
+      repaint.current = paint;
+      paint();
       window.addEventListener("resize", resize);
-      app.canvas.dataset.resizeCleanup = "true";
-      (app as Application & { rbResize?: () => void }).rbResize = () => window.removeEventListener("resize", resize);
     };
-    void init();
+    void init().catch(() => { if (!disposed) element.textContent = 'The city map is unavailable. Story decisions remain available.'; destroy(); });
     return () => {
       disposed = true;
+      repaint.current = undefined;
+      window.removeEventListener("resize", resize);
       destroy();
     };
-  }, [scene, location, night]);
+  }, []);
+  useEffect(() => { repaint.current?.(); }, [scene, location, night]);
   return <div className="game-canvas" ref={host} />;
 }
 

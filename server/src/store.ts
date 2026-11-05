@@ -46,18 +46,22 @@ export interface ModerationCase {
   penalty: string;
   appealNotes: string;
   createdAt: string;
+  decidedAt?: string;
+  compensated?: boolean;
+  reviewHistory?: Array<{ at: string; from: "pending" | "upheld" | "overturned"; to: "upheld" | "overturned"; notes: string }>;
 }
 
 export class MemoryStore {
   market: MarketState = { day: -1, serial: 0, offers: {} };
   clockState: ClockState | undefined;
+  readonly ownerRecovery = new Map<string, string>();
   readonly owners = new Map<string, string>();
   constructor(private readonly savePath?: string) {
     if (!savePath || !existsSync(savePath)) return;
     this.restore(JSON.parse(readFileSync(savePath, "utf8")));
   }
   snapshot(): WorldSnapshot {
-    return structuredClone({ version: 1, market: this.market, clockState: this.clockState,
+    return structuredClone({ version: 1, ownerRecovery: [...this.ownerRecovery], market: this.market, clockState: this.clockState,
       characters: [...this.characters], runtimes: [...this.runtimes], crews: [...this.crews],
       bans: [...this.bans], owners: [...this.owners], moderationCases: this.moderationCases,
       chat: this.chat.slice(-500), packDisabled: [...this.packDisabled],
@@ -76,6 +80,8 @@ export class MemoryStore {
     this.chat.splice(0, this.chat.length, ...structuredClone(data.chat));
     this.packDisabled.clear();
     for (const id of data.packDisabled) this.packDisabled.add(id);
+    this.ownerRecovery.clear();
+    for (const [id, hash] of data.ownerRecovery ?? []) this.ownerRecovery.set(id, hash);
     this.market = structuredClone(data.market ?? { day: -1, serial: 0, offers: {} });
     this.clockState = data.clockState;
     this.cashFaucets = data.cashFaucets; this.cashSinks = data.cashSinks;
@@ -91,7 +97,7 @@ export class MemoryStore {
   readonly runtimes = new Map<string, AgentRuntime>();
   readonly crews = new Map<string, Crew>();
   readonly moderationCases: ModerationCase[] = [];
-  readonly chat: Array<{ id: string; characterId: string; channel: string; message: string; at: string }> = [];
+  readonly chat: Array<{ id: string; characterId: string; channel: string; message: string; at: string; recipientId?: string; crewId?: string }> = [];
   readonly bans = new Map<string, { until: string | null; kind: string }>();
   readonly packDisabled = new Set<string>();
   cashFaucets = 0;
@@ -189,6 +195,7 @@ export class GameClock {
 }
 
 export interface WorldSnapshot {
+  ownerRecovery?: Array<[string, string]>;
   market?: MarketState;
   version: 1;
   clockState?: ClockState;

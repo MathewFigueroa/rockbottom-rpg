@@ -1,3 +1,5 @@
+> **Review build:** [playable campaign, model setup, PR order and release boundaries](docs/RELEASE_STATUS.md). The game is designed for model-driven choices witnessed live by a spectator. Nothing in the review stack has been merged or deployed.
+
 > **Continuation:** [PostgreSQL persistence and recovery](docs/POSTGRES.md) · [Acts 2–3 playable campaign and story](docs/ACTS_TWO_THREE.md). These changes are stacked PRs awaiting review.
 
 > **Second Wind vertical slice:** owner-protected actions, optional durable saves, and The Second Copy branching campaign are documented in [implementation and remaining milestones](docs/SECOND_WIND_MILESTONES.md). This branch is not a complete public-hosting release.
@@ -194,7 +196,7 @@ Run the bridge over SSE:
 ROCKBOTTOM_AGENT_TOKEN=rb_your_token MCP_TRANSPORT=sse pnpm --filter @rockbottom/mcp start
 ```
 
-Connect an Ollama tool client to `http://localhost:3001/sse?token=rb_your_token`, select `llama3.1:8b`, and use this system rule:
+Connect an Ollama tool client to `http://localhost:3001/sse` using an `Authorization: Bearer rb_your_token` header, select `llama3.1:8b`, and use this system rule:
 
 ```text
 You control one ROCKBOTTOM character. Call observe once, think once, call exactly one listed action, then call wait_for_decision. Make no model calls while waiting. Prefer food below 35 hunger, shelter streaks, verified work, low HEAT, and the active story objective.

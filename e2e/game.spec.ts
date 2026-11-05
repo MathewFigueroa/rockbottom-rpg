@@ -111,7 +111,7 @@ test("two clients share proximity, alliance requires consent, and reports remain
     const report = await first.post(`${server}/api/reports`, { data: { reporterId: a.id, targetId: b.id, reason: `test evidence ${flag}`, fingerprint: "canvas-audio-ua-timezone" } });
     const body = await report.json();
     expect(body.status).toBe("pending");
-    expect(body.evidence.fingerprintHash).toHaveLength(64);
+    expect(body.evidence).toBeUndefined(); expect(body.id).toBeTruthy();
     expect(body.penalty).toContain("pending");
   }
   await first.dispose(); await second.dispose();
