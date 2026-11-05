@@ -1,3 +1,5 @@
+import { reviewCase } from "./moderation.js";
+import { chatFor, sendChat } from "./chat.js";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
@@ -27,7 +29,7 @@ const persistence = new PersistenceCoordinator(store, clock, repository);
 store.clockState = clock.read();
 const sim = new Simulation(store, clock);
 const packs = await loadPacks();
-const adminSessions = new Set<string>();
+const adminSessions = new Map<string, number>();
 
 await app.register(cors, { origin: (process.env.CLIENT_ORIGIN ?? "http://localhost:5173,http://localhost:5174").split(","), credentials: true });
 await app.register(cookie, { secret: process.env.ADMIN_SESSION_SECRET ?? "dev-only-secret-change-this-32-chars" });
@@ -38,6 +40,7 @@ const operations = new WeakMap<import("fastify").FastifyRequest, { release: () =
 app.addHook("preHandler", async (request, reply) => {
   if (request.url.startsWith('/ws/') || request.url === '/health') return;
   const release = await persistence.acquire();
+  if (request.raw.aborted || reply.raw.destroyed) { release(); return reply.code(499).send({ error: "request_cancelled" }); }
   if (!persistence.healthy || repository?.healthy === false) {
     release(); return reply.code(503).send({ error: 'persistence_unavailable' });
   }
@@ -155,6 +158,26 @@ app.post('/api/agent/identity', async (request, reply) => {
   return { ok: true, label: character.director.modelLabel, attribution: 'self-described' };
 });
 
+app.post<{ Params: { id: string } }>('/api/characters/:id/agent-token', async (request, reply) => {
+  const character = store.characters.get(request.params.id);
+  if (!character) return reply.code(404).send({ error: 'character_not_found' });
+  character.agentToken = `rb_${randomBytes(24).toString('base64url')}`;
+  return { agentToken: character.agentToken };
+});
+app.post<{ Params: { id: string } }>('/api/characters/:id/recovery-code', async (request, reply) => {
+  if (!store.characters.has(request.params.id)) return reply.code(404).send({ error: 'character_not_found' });
+  const code = randomBytes(32).toString('base64url'); store.ownerRecovery.set(request.params.id, createHash('sha256').update(code).digest('hex'));
+  return { recoveryCode: code };
+});
+app.post('/api/recover', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply) => {
+  const body = request.body as { id?: unknown; recoveryCode?: unknown };
+  if (typeof body?.id !== 'string' || typeof body.recoveryCode !== 'string' || body.recoveryCode.length > 128) return reply.code(401).send({ error: 'invalid_recovery_credentials' });
+  const expected = store.ownerRecovery.get(body.id); const actual = createHash('sha256').update(body.recoveryCode).digest('hex');
+  if (!expected || !store.characters.has(body.id) || !safeEqual(expected, actual)) return reply.code(401).send({ error: 'invalid_recovery_credentials' });
+  grantOwner(body.id, reply);
+  return { id: body.id };
+});
+
 app.get("/api/shards", async () => [{ id: "halvern-1", name: "Halvern City", players: store.characters.size, capacity: 64, public: true }]);
 app.get("/api/packs", async () => packs.map((pack) => ({ ...pack.manifest, enabled: !store.packDisabled.has(pack.manifest.id) })));
 app.get("/api/content/tapes", async () => packs.flatMap((pack) => Array.isArray(pack.content.tapes) ? pack.content.tapes : []));
@@ -189,7 +212,7 @@ app.get("/api/agent/wait", async (request, reply) => {
 app.get("/api/agent/story", async (request, reply) => {
   const character = agentCharacter(request.headers.authorization, request.headers["x-agent-token"] as string | undefined);
   if (!character) return reply.code(401).send({ error: "invalid_agent_token" });
-  return { character: { name: character.name, mode: character.mode, status: character.status, needs: character.needs, cash: character.cash, housing: character.housing, record: character.record, nextDecisionAt: character.nextDecisionAt }, director: character.director, recent_events: character.chronicle?.slice(-12) ?? [], archive: allRecords().filter(record => character.tapes.includes(record.id)), life: lifeView(character, store, clock.nowMs()), campaign: campaignView(character), narrative: storyView(character), act: character.act, quest_step: character.questStep, objective: character.activeObjective, custody: sim.hearing(character), tapes: character.tapes.length };
+  return { character: { name: character.name, mode: character.mode, status: character.status, needs: character.needs, cash: character.cash, housing: character.housing, record: character.record, nextDecisionAt: character.nextDecisionAt }, director: character.director, agent_memory: character.planNotes, messages: chatFor(store, character.id).slice(-10), recent_events: character.chronicle?.slice(-12) ?? [], archive: allRecords().filter(record => character.tapes.includes(record.id)), life: lifeView(character, store, clock.nowMs()), campaign: campaignView(character), narrative: storyView(character), act: character.act, quest_step: character.questStep, objective: character.activeObjective, custody: sim.hearing(character), tapes: character.tapes.length };
 });
 
 app.post("/api/agent/plan-note", async (request, reply) => {
@@ -207,10 +230,8 @@ app.post("/api/agent/chat", async (request, reply) => {
   if (!character) return reply.code(401).send({ error: "invalid_agent_token" });
   const ban = store.bans.get(character.id);
   if (ban && (!ban.until || Date.parse(ban.until) > Date.now())) return reply.code(403).send({ error: "communications_restricted" });
-  const body = request.body as { channel?: string; message?: string };
-  const entry = { id: randomUUID(), characterId: character.id, channel: body.channel?.slice(0, 20) || "proximity", message: body.message?.slice(0, 280) || "", at: clock.now() };
-  store.chat.push(entry);
-  return entry;
+  const result = sendChat(store, character.id, request.body as Parameters<typeof sendChat>[2], clock.now());
+  return result.ok ? result.entry : reply.code(400).send({ error: result.error });
 });
 
 app.get<{ Params: { id: string } }>("/api/watch/:id", async (request, reply) => {
@@ -232,9 +253,11 @@ app.post<{ Params: { id: string; tapeId: string } }>("/api/characters/:id/tapes/
 app.get<{ Params: { id: string } }>("/ws/watch/:id", { websocket: true }, (socket, request) => {
   const character = store.characters.get(request.params.id);
   if (!character) return socket.close(1008, "character_not_found");
+  if (character.spectatorCount >= 32 || [...store.characters.values()].reduce((sum, c) => sum + c.spectatorCount, 0) >= 128) return socket.close(1013, 'spectator_capacity');
   character.spectatorCount += 1;
   const send = () => {
-    if (persistence.busy || !persistence.healthy || repository?.healthy === false) return;
+    if (!persistence.healthy || repository?.healthy === false) { socket.close(1011, 'persistence_unavailable'); return; }
+    if (persistence.busy) return;
     const current = store.characters.get(request.params.id);
     if (current && socket.readyState === 1) socket.send(JSON.stringify({ clock: clock.read(), character: publicCharacter(current), actions: current.actionLog, planNotes: [], spectatorCount: current.spectatorCount }));
   };
@@ -270,24 +293,27 @@ app.post<{ Params: { id: string } }>("/api/crews/:id/ally", async (request, repl
 app.post("/api/chat", async (request, reply) => {
   const body = request.body as { characterId?: string; channel?: string; message?: string };
   if (!body.characterId || !store.characters.has(body.characterId)) return reply.code(404).send({ error: "character_not_found" });
-  const entry = { id: randomUUID(), characterId: body.characterId, channel: body.channel ?? "proximity", message: String(body.message ?? "").slice(0, 280), at: clock.now() };
-  store.chat.push(entry);
-  return reply.code(201).send(entry);
+  const result = sendChat(store, body.characterId, request.body as Parameters<typeof sendChat>[2], clock.now());
+  return result.ok ? reply.code(201).send(result.entry) : reply.code(400).send({ error: result.error });
 });
-app.get("/api/chat", async () => store.chat.slice(-50));
+app.get('/api/chat', async () => chatFor(store));
+app.get('/api/people', async () => [...store.characters.values()].map(c => ({ id: c.id, name: c.name, location: c.location })));
+app.get<{ Params: { id: string } }>('/api/characters/:id/chat', async request => chatFor(store, request.params.id));
+app.get('/api/agent/chat', async (request, reply) => {
+  const character = agentCharacter(request.headers.authorization, request.headers['x-agent-token'] as string | undefined);
+  return character ? chatFor(store, character.id) : reply.code(401).send({ error: 'invalid_agent_token' });
+});
 
 app.post("/api/reports", async (request, reply) => {
   const body = request.body as { reporterId?: string; targetId?: string; reason?: string; fingerprint?: string };
   if (!body.reporterId || !body.targetId || !store.characters.has(body.targetId)) return reply.code(400).send({ error: "invalid_report" });
   const previous = store.moderationCases.filter((item) => item.targetId === body.targetId && item.status !== "overturned").length;
   const flagNumber = Math.min(3, previous + 1);
-  const penalty = flagNumber === 1 ? "1 hour communications ban" : flagNumber === 2 ? "24 hour game ban" : "permanent account, IP, and device-fingerprint ban";
-  // Browsers cannot expose a MAC address. A salted device fingerprint hash is the industry substitute.
-  const fingerprintHash = createHash("sha256").update(`${body.fingerprint ?? "unknown"}:${process.env.ADMIN_SESSION_SECRET ?? "dev"}`).digest("hex");
+  const fingerprintHash = createHash('sha256').update(`account:${body.targetId}:${process.env.ADMIN_SESSION_SECRET ?? 'dev'}`).digest('hex');
   const moderationCase = { id: randomUUID(), reporterId: body.reporterId, targetId: body.targetId, reason: String(body.reason ?? "unspecified").slice(0, 500), evidence: { audioClip: "data:audio/wav;base64,UklGRg==", chat: store.chat.filter((entry) => entry.characterId === body.targetId).slice(-10).map((entry) => entry.message), fingerprintHash }, status: "pending" as const, flagNumber, penalty: "No penalty pending review", appealNotes: "", createdAt: clock.now() };
   store.moderationCases.push(moderationCase);
 
-  return reply.code(201).send(moderationCase);
+  return reply.code(201).send({ id: moderationCase.id, status: moderationCase.status, penalty: moderationCase.penalty, createdAt: moderationCase.createdAt });
 });
 
 app.post("/api/admin/login", { config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (request, reply) => {
@@ -296,7 +322,8 @@ app.post("/api/admin/login", { config: { rateLimit: { max: 5, timeWindow: "1 min
   const expectedPass = process.env.ADMIN_PASSWORD ?? "change-me-now";
   if (!safeEqual(body.username ?? "", expectedUser) || !safeEqual(body.password ?? "", expectedPass)) return reply.code(401).send({ error: "invalid_credentials" });
   const session = randomBytes(24).toString("base64url");
-  adminSessions.add(session);
+  for (const [id, expiry] of adminSessions) if (expiry <= Date.now()) adminSessions.delete(id);
+  adminSessions.set(session, Date.now() + 28800000);
   reply.setCookie("rb_admin", session, { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 28_800 });
   return { ok: true };
 });
@@ -304,7 +331,7 @@ app.post("/api/admin/login", { config: { rateLimit: { max: 5, timeWindow: "1 min
 app.addHook("preHandler", async (request, reply) => {
   if (!request.url.startsWith("/api/admin/") || request.url === "/api/admin/login") return;
   const testSecret = request.headers["x-admin-secret"];
-  const valid = adminSessions.has(request.cookies.rb_admin ?? "") || (process.env.NODE_ENV !== "production" && testSecret === "dev-admin");
+  const valid = (adminSessions.get(request.cookies.rb_admin ?? "") ?? 0) > Date.now() || (process.env.NODE_ENV !== "production" && testSecret === "dev-admin");
   if (!valid) return reply.code(401).send({ error: "admin_auth_required" });
 });
 
@@ -319,15 +346,9 @@ app.post<{ Params: { id: string } }>("/api/admin/moderation/:id", async (request
   if (!moderationCase) return reply.code(404).send({ error: "case_not_found" });
   const body = request.body as { decision?: "upheld" | "overturned"; appealNotes?: string };
   if (!["upheld", "overturned"].includes(body.decision ?? "")) return reply.code(400).send({ error: "decision_required" });
-  if (moderationCase.status !== "pending") return reply.code(409).send({ error: "case_already_decided" });
-  moderationCase.status = body.decision!;
-  moderationCase.appealNotes = body.appealNotes?.slice(0, 1000) ?? "";
-  if (body.decision === "upheld") {
-    const strikes = store.moderationCases.filter(c => c.targetId === moderationCase.targetId && c.status === "upheld").length;
-    moderationCase.flagNumber = strikes;
-    moderationCase.penalty = strikes === 1 ? "communications" : "game";
-    store.bans.set(moderationCase.targetId, { kind: moderationCase.penalty, until: strikes >= 3 ? null : new Date(Date.now() + (strikes === 1 ? 3600000 : 86400000)).toISOString() });
-  }
+  if (body.appealNotes !== undefined && typeof body.appealNotes !== 'string') return reply.code(400).send({ error: 'invalid_notes' });
+  const result = reviewCase(store, moderationCase, body.decision!, body.appealNotes ?? '', Date.now());
+  if (!result.ok) return reply.code(400).send({ error: result.error });
   return moderationCase;
 });
 
@@ -401,4 +422,4 @@ function safeEqual(left: string, right: string) {
 const port = Number(process.env.PORT ?? 3000);
 if (process.env.NODE_ENV !== "test") await app.listen({ port, host: "0.0.0.0" });
 
-export { app, store, clock, sim };
+export { app, store, clock, sim, persistence };

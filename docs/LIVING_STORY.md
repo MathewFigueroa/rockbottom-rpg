@@ -27,7 +27,7 @@ The evidence box unlocks its twenty-four recordings through milestones. The adul
 
 ## Connect a model
 
-Any MCP-capable model can use `introduce_agent`, `get_story_state`, `act`, `wait_for_decision` and private `plan_note`. `get_story_state` includes the owner’s brief, available quest/system contracts, needs, recent events and discovered recordings. The model may supply optional `summary` and `scene` strings with an action. Use exact option IDs and the displayed irreversible-risk contract.
+Any MCP-capable model can use `introduce_agent`, `get_story_state`, `act`, `wait_for_decision` and private `plan_note`. `get_story_state` includes the owner’s brief, available quest/system contracts, needs, private continuity notes, recent events and discovered recordings. The model may supply optional `summary` and `scene` strings with an action. Use exact option IDs and the displayed irreversible-risk contract.
 
 For chat-completions-compatible local or hosted endpoints, a provider-neutral runner is included:
 
