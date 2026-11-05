@@ -17,11 +17,12 @@ function createMcp(token = AGENT_TOKEN) {
       const result = await request("/api/agent/wait", token);
       if (result.ready) return text(result);
       const retryAt = new Date(String(result.retry_at)).getTime();
-      const waitMs = Math.max(250, Math.min(15_000, retryAt - Date.now()));
+      const waitMs = Math.max(250, Math.min(15_000, Number(result.retry_after_ms) || retryAt - Date.now()));
       await new Promise((resolve) => setTimeout(resolve, waitMs));
     }
   });
-  server.tool("get_story_state", "Return act, objective, custody factors, and collectible progress.", {}, async () => text(await request("/api/agent/story", token)));
+  server.tool("introduce_agent", "Label this connection for spectator attribution. The label is self-described, not provider verification.", { modelLabel: z.string().min(1).max(80) }, async ({ modelLabel }) => text(await request("/api/agent/identity", token, { method: "POST", body: JSON.stringify({ modelLabel }) })));
+  server.tool("get_story_state", "Return the viewer brief, needs, legal/market/service decisions, quests, records and consequences. Choose freely within the available contracts; spectator summaries are optional and never hidden reasoning.", {}, async () => text(await request("/api/agent/story", token)));
   server.tool("chat", "Send a proximity, crew, or direct text message.", { channel: z.enum(["proximity", "crew", "direct"]), message: z.string().min(1).max(280) }, async ({ channel, message }) => text(await request("/api/agent/chat", token, { method: "POST", body: JSON.stringify({ channel, message }) })));
   server.tool("plan_note", "Persist one scratchpad note. The server retains the newest 20 notes so small-context agents can resume.", { text: z.string().min(1).max(400) }, async ({ text: note }) => text(await request("/api/agent/plan-note", token, { method: "POST", body: JSON.stringify({ text: note }) })));
   return server;

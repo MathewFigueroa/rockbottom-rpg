@@ -96,9 +96,14 @@ export function advanceQuest(c: CharacterState, params: Record<string, unknown>,
       message += c.story?.choice === 'save_neighbors' ? ' Six names appear in the flood shelter register. None appear in the original’s margin.' : c.story?.choice === 'secure_ledger' ? ' Sam’s clinic receipt is folded inside the original ledger.' : '';
     }
     if (stage.id === 'ending') {
-      const custody = state.flags.find(f => f.startsWith('custody-order:'))?.split(':')[1];
+      const custody = state.flags.filter(f => f.startsWith('custody-order:')).at(-1)?.split(':')[1];
       state.ending = c.status === 'dead' ? 'HONOR' : custody === 'shared' ? 'FORGIVENESS' : state.flags.includes('heirloom-fenced') && state.flags.includes('wallet-kept') ? 'THE CYCLE' : 'THE OPEN DOOR';
-      message = `${state.ending}. ${message} ` + (c.status === 'dead' ? 'You can honor the parent without calling the risk a debt they owed you.' : custody === 'shared' ? 'I forgive the years you missed. I do not make them disappear. I keep the difference.' : 'The order did not grant every wish. The calls and the appointments after it still happened. An unfinished recovery is not an empty life.');
+      if (state.flags.includes('relapse-accepted')) message += ' Marcus kept a morning that the shelter log could not describe. The restart remains part of the record.';
+      if (state.flags.includes('crew-rat')) message += ' The evidence payment and transit-camera image remain together. They do not settle the question of motive.';
+      if (c.social?.completed.includes('sam-repair')) message += ' Sam’s repaired radio plays beside the box. Repair was a verb before it became a claim about a person.';
+      if (state.flags.includes('public-fund:community')) message += ' Nell kept the relocation receipt. The unfilled household deposit is clipped behind it.';
+      const echoes = message;
+      message = `${state.ending}. ` + (c.status === 'dead' ? 'You can honor the parent without calling the risk a debt they owed you.' : custody === 'shared' ? 'I forgive the years you missed. I do not make them disappear. I keep the difference.' : 'The order did not grant every wish. The calls and the appointments after it still happened. An unfinished recovery is not an empty life.') + ` ${echoes}`;
     }
   }
   c.location = q.id === 'the-frame' ? 'The Kitchen Table · Years Later' : q.id === 'keys' ? 'Northside Housing Office' : q.id === 'day-thirty' ? 'Whitfield Family Court' : q.path === 'army' ? 'Fort Halvern Annex' : 'Market Row';

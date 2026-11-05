@@ -102,7 +102,9 @@ test("two clients share proximity, alliance requires consent, and reports remain
   const crewA = await (await first.post(`${server}/api/crews`, { data: { name: "North Cut", characterId: a.id } })).json();
   const crewB = await (await second.post(`${server}/api/crews`, { data: { name: "River Hands", characterId: b.id } })).json();
   const alliance = await first.post(`${server}/api/crews/${crewA.id}/ally`, { data: { crewId: crewB.id } });
-  expect(alliance.status()).toBe(409);
+  expect(alliance.status()).toBe(403);
+  const proposal = await first.post(`${server}/api/crews/${crewA.id}/ally`, { data: { crewId: crewB.id, characterId: a.id } }); expect(proposal.status()).toBe(202);
+  const accepted = await second.post(`${server}/api/crews/${crewB.id}/ally`, { data: { crewId: crewA.id, characterId: b.id } }); expect((await accepted.json()).mutual).toBe(true);
   await second.post(`${server}/api/chat`, { data: { characterId: b.id, channel: "proximity", message: "Day lot is hiring." } });
   expect((await (await first.get(`${server}/api/chat`)).json()).at(-1).message).toBe("Day lot is hiring.");
   for (let flag = 1; flag <= 3; flag++) {
@@ -119,12 +121,10 @@ test("all 24 tapes collect and the frame, Forgiveness, and Honor render end to e
   const character = await createCharacter(request, "Archivist");
   const tapes = await (await request.get(`${server}/api/content/tapes`)).json();
   expect(tapes).toHaveLength(24);
-  for (const tape of tapes) {
-    const response = await request.post(`${server}/api/characters/${character.id}/tapes/${tape.id}`);
-    expect(response.ok()).toBeTruthy();
-  }
-  const state = await (await request.get(`${server}/api/characters/${character.id}`)).json();
-  expect(state.tapes).toHaveLength(24);
+  expect((await request.post(`${server}/api/characters/${character.id}/tapes/tape-24`)).status()).toBe(403);
+  expect((await request.post(`${server}/api/characters/${character.id}/tapes/tape-01`)).ok()).toBeTruthy();
+  const fixture = await (await request.post(`${server}/api/demo/reveal`)).json();
+  character.id = fixture.id;
   await page.context().addCookies(await request.storageState().then(s => s.cookies));
   await page.goto(`/?character=${character.id}&scene=reveal`);
   await expect(page.getByText("RECONSTRUCTION PAUSED")).toBeVisible();

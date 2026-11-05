@@ -40,7 +40,7 @@ function TitleScreen({ onBegin, onContinue }: { onBegin: () => void; onContinue:
 }
 
 function CharacterCreation({ onBack, onCreated }: { onBack: () => void; onCreated: (character: CharacterState) => void }) {
-  const [form, setForm] = useState({ name: "Jamie", sex: "female" as "female" | "male", childName: "Riley", childAge: 8 });
+  const [form, setForm] = useState({ name: "Jamie", sex: "female" as "female" | "male", childName: "Riley", childAge: 8, brief: "Show me a life shaped by care, ambition and the consequences of promises.", shareSummaries: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const submit = async (event: React.FormEvent) => {
@@ -61,6 +61,8 @@ function CharacterCreation({ onBack, onCreated }: { onBack: () => void; onCreate
           <label>Your name<input value={form.name} maxLength={24} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
           <fieldset><legend>Parent</legend><div className="segmented"><button type="button" className={form.sex === "female" ? "selected" : ""} onClick={() => setForm({ ...form, sex: "female" })}>Woman</button><button type="button" className={form.sex === "male" ? "selected" : ""} onClick={() => setForm({ ...form, sex: "male" })}>Man</button></div></fieldset>
           <div className="form-row"><label>Child's name<input value={form.childName} maxLength={24} onChange={(event) => setForm({ ...form, childName: event.target.value })} required /></label><label>Age<select value={form.childAge} onChange={(event) => setForm({ ...form, childAge: Number(event.target.value) })}>{[6, 7, 8, 9, 10].map((age) => <option key={age}>{age}</option>)}</select></label></div>
+          <label>Your brief for the agent<textarea value={form.brief} maxLength={1000} onChange={event => setForm({ ...form, brief: event.target.value })} /></label>
+          <label><input type="checkbox" checked={form.shareSummaries} onChange={event => setForm({ ...form, shareSummaries: event.target.checked })} />Share the agent’s short decision summaries and scene interpretations with spectators</label>
           <div className="keepsake"><img src="/assets/items/creased-photo.png" alt="Creased photograph" /><div><strong>Creased photo</strong><p>Always with you. It cannot be sold, dropped, traded, or stolen.</p></div><span className="lock">LOCKED</span></div>
           {error && <p className="form-error" role="alert">{error}</p>}
           <button className="primary full" disabled={busy}>{busy ? "Entering Halvern..." : "Wake beneath Route 9"}</button>
@@ -77,7 +79,7 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [visitationOpen, setVisitationOpen] = useState(false);
-  const [campaignPanel, setCampaignPanel] = useState<"story" | "quests" | "life">("story");
+  const [campaignPanel, setCampaignPanel] = useState<"story" | "quests" | "life" | "records">("story");
   const load = useCallback(async () => {
     if (!characterId) return;
     try { setCharacter(await api.character(characterId)); } catch (reason) { setError(reason instanceof Error ? reason.message : "Character unavailable"); }
@@ -87,7 +89,7 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
     if (!character || busy) return;
     if (action === "attend_visitation" && !force) { setVisitationOpen(true); return; }
     setBusy(true);
-    try { const result = await api.action(character.id, action, params); const updated = await api.character(character.id); setCharacter(updated); setCampaignPanel(["army_action", "street_action"].includes(action) ? "life" : updated.storyChoices?.length ? "story" : "quests"); setMessage(["story_decision", "quest_choice", "army_action", "street_action"].includes(action) ? "" : result.message); } catch (reason) { setMessage(reason instanceof Error ? reason.message : "Action failed"); } finally { setBusy(false); }
+    try { const result = await api.action(character.id, action, params); const updated = await api.character(character.id); setCharacter(updated); setCampaignPanel(["army_action", "street_action", "life_action"].includes(action) ? "life" : updated.storyChoices?.length ? "story" : "quests"); setMessage(["story_decision", "quest_choice", "army_action", "street_action", "life_action"].includes(action) ? "" : result.message); } catch (reason) { setMessage(reason instanceof Error ? reason.message : "Action failed"); } finally { setBusy(false); }
   };
   const setMode = async (mode: ControlMode) => { if (!character) return; setCharacter(await api.mode(character.id, mode)); };
   if (error) return <main className="fatal"><h1>Halvern is out of reach</h1><p>{error}</p><button onClick={onExit}>Return to title</button></main>;
@@ -112,10 +114,11 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
       <aside className="objective-panel"><div className="objective-number">{String(character.questStep + 1).padStart(2, "0")}</div><div><small>ACT {character.act}: {character.act === 1 ? "THE FLOOR" : character.act === 2 ? "THE LADDER" : "THE FRAME"}</small><strong>{character.activeObjective}</strong></div></aside>
       <div className="location-pip"><span>⌖</span>{character.location}</div>
       {message && <button className="toast" onClick={() => setMessage("")}>{message}</button>}
-      {character.act >= 2 && <nav className="campaign-tabs" aria-label="Campaign view"><button onClick={() => setCampaignPanel("story")} aria-pressed={campaignPanel === "story"}>Story</button><button onClick={() => setCampaignPanel("quests")} aria-pressed={campaignPanel === "quests"}>Quests</button><button onClick={() => setCampaignPanel("life")} aria-pressed={campaignPanel === "life"}>Life</button></nav>}
+      {character.act >= 2 && <nav className="campaign-tabs" aria-label="Campaign view"><button onClick={() => setCampaignPanel("story")} aria-pressed={campaignPanel === "story"}>Story</button><button onClick={() => setCampaignPanel("quests")} aria-pressed={campaignPanel === "quests"}>Quests</button><button onClick={() => setCampaignPanel("life")} aria-pressed={campaignPanel === "life"}>Life</button><button onClick={() => setCampaignPanel("records")} aria-pressed={campaignPanel === "records"}>Records</button></nav>}
       {character.act >= 2 && campaignPanel === "story" && <section className="dialogue-panel story-dialogue" aria-label="Second Wind story"><div><small>{character.story?.events.at(-1)?.timeline ?? 'THE SECOND COPY'}</small><p>{character.story?.events.at(-1)?.text ?? 'A clerk has a question about your signature. Open the record.'}</p><p>{STORY_PROMPTS[character.story?.stage ?? 0]}</p><div className="choice-list">{(character.storyChoices ?? []).map(choice => <button key={choice} disabled={busy} onClick={() => void act('story_decision', { choice })}>{choice.replaceAll('_', ' ')}</button>)}</div></div></section>}
       {character.act >= 2 && campaignPanel === "quests" && <QuestJournal character={character} busy={busy} act={act} />}
       {character.act >= 2 && campaignPanel === "life" && <LifePanel character={character} busy={busy} act={act} />}
+      {character.act >= 2 && campaignPanel === "records" && <RecordsPanel characterId={character.id} />}
       <ActionDock character={character} busy={busy} act={act} />
       <TouchControls onAction={() => void act(recommendedAction(character))} />
       {effectiveScene === "opening" && <OpeningPanel character={character} onClose={() => setMessage("The cart waits east of the pillar.")} />}
@@ -128,9 +131,15 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
       {visitationOpen && <VisitationPanel character={character} onComplete={() => { setVisitationOpen(false); void act("attend_visitation", {}, true); }} />}
       {effectiveScene === "reveal" && !character.story && <FrameOverlay />}
       {(effectiveScene === "forgiveness" || effectiveScene === "honor") && <EndingOverlay ending={effectiveScene} childName={character.childName} />}
-      {pause && <PausePanel character={character} onClose={() => setPause(false)} onMode={setMode} onExit={onExit} />}
+      {pause && <PausePanel character={character} onClose={() => setPause(false)} onMode={setMode} onDirector={async input => { await api.director(character.id, input); await load(); }} onExit={onExit} />}
     </main>
   );
+}
+
+function RecordsPanel({ characterId }: { characterId: string }) {
+  const [records, setRecords] = useState<Array<{ id: string; name: string; content: string }>>([]);
+  useEffect(() => { void api.records(characterId).then(setRecords); }, [characterId]);
+  return <aside className="quest-journal" aria-label="Discovered records"><h2>The evidence box · {records.length}/24</h2><p>These are witnesses and records, not guarantees that every remembered detail happened.</p>{records.map(record => <details key={record.id}><summary>{record.name}</summary><p>{record.content}</p></details>)}</aside>;
 }
 
 function LifePanel({ character, busy, act }: { character: CharacterState; busy: boolean; act: (action: string, params?: Record<string, unknown>) => Promise<void> }) {
@@ -216,7 +225,7 @@ function HearingOverlay({ character }: { character: CharacterState }) {
 }
 
 function AgentTicker({ character }: { character: CharacterState }) {
-  return <aside className="agent-ticker"><header><div><span className="live-dot" /> LIVE AGENT</div><strong>{character.name}</strong><small>{character.spectatorCount || 3} WATCHING</small></header><div className="agent-status"><span>RULE AGENT</span><strong>WAITING FOR DECISION</strong><small>Next window in 00:31</small></div><ol>{character.actionLog.slice(0, 5).map((entry, index) => <li key={`${entry.at}-${index}`}><time>{new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time><div><strong>{entry.action.replaceAll("_", " ")}</strong><p>{entry.detail}</p></div></li>)}</ol><div className="plan-note"><small>PLAN NOTE · OPT IN</small>Keep shelter streak. Eat if hunger drops below 35. Prefer verified shifts.</div></aside>;
+  return <aside className="agent-ticker"><header><div><span className="live-dot" /> LIVE AGENT</div><strong>{character.name}</strong><small>{character.spectatorCount} WATCHING</small></header><div className="agent-status"><span>RULE AGENT</span><strong>WAITING FOR DECISION</strong><small>Next window in 00:31</small></div><ol>{character.actionLog.slice(0, 5).map((entry, index) => <li key={`${entry.at}-${index}`}><time>{new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time><div><strong>{entry.action.replaceAll("_", " ")}</strong><p>{entry.detail}</p></div></li>)}</ol><div className="plan-note"><small>PLAN NOTE · OPT IN</small>Keep shelter streak. Eat if hunger drops below 35. Prefer verified shifts.</div></aside>;
 }
 
 function CrewOverlay() {
@@ -236,9 +245,11 @@ function EndingOverlay({ ending, childName }: { ending: string; childName: strin
   return <section className={`ending-overlay ${ending}`}><small>ROCKBOTTOM: SECOND WIND</small><h1>{honor ? "HONOR" : "FORGIVENESS"}</h1><p>{honor ? "The money came home on time. You did not." : `I forgive the years you missed. I do not make them disappear. I keep the difference.`}</p><div className="ending-object">{honor ? "FORT HALVERN · NAME ETCHED" : `${childName.toUpperCase()} · THE PHOTOGRAPH, REVERSED`}</div><footer>NEW GAME+ UNLOCKED · TAPES VISIBLE FROM DAWN</footer></section>;
 }
 
-function PausePanel({ character, onClose, onMode, onExit }: { character: CharacterState; onClose: () => void; onMode: (mode: ControlMode) => Promise<void>; onExit: () => void }) {
+function PausePanel({ character, onClose, onMode, onDirector, onExit }: { character: CharacterState; onClose: () => void; onMode: (mode: ControlMode) => Promise<void>; onDirector: (input: { brief: string; shareSummaries: boolean }) => Promise<void>; onExit: () => void }) {
   const [showToken, setShowToken] = useState(false);
-  return <div className="pause-scrim" role="dialog" aria-modal="true" aria-label="Pause menu"><section className="pause-panel"><header><div><small>GAME PAUSED</small><h2>{character.name}</h2></div><button className="icon-button" onClick={onClose}>×</button></header><div className="control-mode"><small>CONTROL MODE</small><div className="segmented"><button className={character.mode === "manual" ? "selected" : ""} onClick={() => void onMode("manual")}>Manual</button><button className={character.mode === "agent" ? "selected" : ""} onClick={() => void onMode("agent")}>Agent</button></div><p>Agent mode submits one action per decision window. Travel, work, sleep, and training require no model calls.</p></div><div className="token-row"><div><small>CHARACTER AGENT TOKEN</small><code>{showToken ? character.agentToken : "rb_••••••••••••••••••••"}</code></div><button onClick={() => setShowToken(!showToken)}>{showToken ? "Hide" : "Reveal"}</button></div><a href={`/watch/${character.id}`}>Open spectator view ↗</a><button className="quiet full" onClick={onExit}>Save and return to title</button></section></div>;
+  const [brief, setBrief] = useState(character.director?.brief ?? "");
+  const [share, setShare] = useState(character.director?.shareSummaries ?? false);
+  return <div className="pause-scrim" role="dialog" aria-modal="true" aria-label="Pause menu"><section className="pause-panel"><header><div><small>GAME PAUSED</small><h2>{character.name}</h2></div><button className="icon-button" onClick={onClose}>×</button></header><div className="control-mode"><small>CONTROL MODE</small><div className="segmented"><button className={character.mode === "manual" ? "selected" : ""} onClick={() => void onMode("manual")}>Manual</button><button className={character.mode === "agent" ? "selected" : ""} onClick={() => void onMode("agent")}>Agent</button></div><p>Agent mode submits one action per decision window. Travel, work, sleep, and training require no model calls.</p></div><div className="token-row"><div><small>CHARACTER AGENT TOKEN</small><code>{showToken ? character.agentToken : "rb_••••••••••••••••••••"}</code></div><button onClick={() => setShowToken(!showToken)}>{showToken ? "Hide" : "Reveal"}</button></div><label>Brief for your agent<textarea value={brief} maxLength={1000} onChange={e => setBrief(e.target.value)} /></label><label><input type="checkbox" checked={share} onChange={e => setShare(e.target.checked)} />Share agent decision summaries</label><button onClick={() => void onDirector({ brief, shareSummaries: share })}>Save agent brief</button><a href={`/watch/${character.id}`}>Open spectator view ↗</a><button className="quiet full" onClick={onExit}>Save and return to title</button></section></div>;
 }
 
 function TouchControls({ onAction }: { onAction: () => void }) {
@@ -260,7 +271,8 @@ function Spectator({ characterId }: { characterId: string }) {
   }, [characterId]);
   if (error) return <main className="fatal"><h1>Stream unavailable</h1><p>{error}</p></main>;
   if (!data) return <main className="loading"><span/><span/><span/></main>;
-  return <main className="spectator-shell"><header><a href="/"><img src="/assets/logo-mark.png" alt="Rockbottom" /></a><div><span className="live-dot" /> LIVE SPECTATOR</div><span>{data.spectatorCount + 1} WATCHING</span></header><section className="spectator-world"><GameCanvas scene="agent" location={data.character.location} night={false} /><div className="watch-label"><strong>{data.character.name}</strong><span className={data.character.status === "stuck" ? "stuck" : ""}>{data.character.status.toUpperCase()}</span></div></section><aside className="spectator-pane"><div className="agent-card"><span className="mini-avatar">{data.character.name[0]}</span><div><strong>{data.character.name}</strong><small>RULE AGENT · ACT {data.character.act}</small></div><span className="agent-badge">AGENT</span></div><div className="decision-clock"><small>NEXT DECISION</small><strong>00:31</strong><p>Zero model calls during travel and shifts</p></div><h2>Action ticker</h2><ol>{data.actions.slice(0, 8).map((entry, index) => <li key={`${entry.at}-${index}`}><time>{new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time><div><strong>{entry.action.replaceAll("_", " ")}</strong><p>{entry.detail}</p></div></li>)}</ol><h2>Plan notes <small>OPT IN</small></h2><div className="spectator-note">{data.planNotes[0]?.text ?? "Keep the shelter streak. Eat below 35 hunger. Prefer verified work."}</div></aside></main>;
+  return <main className="spectator-shell"><header><a href="/"><img src="/assets/logo-mark.png" alt="Rockbottom" /></a><div><span className="live-dot" /> LIVE SPECTATOR</div><span>{data.spectatorCount} WATCHING</span></header><section className="spectator-world"><GameCanvas scene="agent" location={data.character.location} night={false} /><div className="watch-label"><strong>{data.character.name}</strong><span className={data.character.status === "stuck" ? "stuck" : ""}>{data.character.status.toUpperCase()}</span></div></section><aside className="spectator-pane"><div className="agent-card"><span className="mini-avatar">{data.character.name[0]}</span><div><strong>{data.character.name}</strong><small>{data.character.mode === "agent" ? "AGENT CONTROL" : "MANUAL CONTROL"} · ACT {data.character.act}</small></div><span className="agent-badge">AGENT</span></div><div className="decision-clock"><small>NEXT DECISION</small><strong>{data.clock?.paused ? "PAUSED" : data.clock ? `${Math.max(0, Math.ceil((Date.parse(data.character.nextDecisionAt) - Date.parse(data.clock.gameTime)) / (1000 * data.clock.scale)))}s` : "WAITING"}</strong><p>Actions unlock when the simulation reaches the next decision.</p></div><h2>Action ticker</h2><ol>{data.actions.slice(0, 8).map((entry, index) => <li key={`${entry.at}-${index}`}><time>{new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time><div><strong>{entry.action.replaceAll("_", " ")}</strong><p>{entry.detail}</p></div></li>)}</ol>{data.character.agentVoice && <section className="agent-voice"><h2>Agent interpretation</h2><small>{data.character.agentVoice.modelLabel} · self-described · {data.character.agentVoice.action.replaceAll("_", " ")}</small><p>{data.character.agentVoice.summary}</p><p>{data.character.agentVoice.scene}</p><small>This interpretation does not change the game’s recorded outcomes.</small></section>}
+    <h2>Living record</h2><ol>{data.character.chronicle?.slice(-5).reverse().map(event => <li key={event.id}><div><strong>{event.chapter.replaceAll('_', ' ')}</strong><p>{event.text}</p></div></li>)}</ol><h2>Plan notes <small>PRIVATE</small></h2><div className="spectator-note">{data.planNotes[0]?.text ?? "Plan notes are private."}</div></aside></main>;
 }
 
 function normalizeScene(scene: string, character: CharacterState) {

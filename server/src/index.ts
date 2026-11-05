@@ -6,6 +6,7 @@ import websocket from "@fastify/websocket";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { loadPacks } from "./packs.js";
 import { GameClock, MemoryStore } from "./store.js";
+import { eligibleRecords } from "./records.js";
 import { lifeView } from "./systems.js";
 import { campaignView } from "./campaign.js";
 import { storyView, choices } from "./story.js";
@@ -52,7 +53,11 @@ app.addHook("preHandler", async (request, reply) => {
   const body = request.body as Record<string, unknown> | undefined;
   let id = match?.[1];
   if (["/api/chat", "/api/crews", "/api/reports"].includes(path) && request.method === "POST") id = String(body?.characterId ?? body?.reporterId ?? "");
-  if (/^\/api\/crews\/[^/]+\/ally$/.test(path)) return reply.code(409).send({ error: "mutual_alliance_consent_not_implemented" });
+  const alliance = path.match(/^\/api\/crews\/([^/]+)\/ally$/);
+  if (alliance) {
+    id = String(body?.characterId ?? '');
+    if (!store.crews.get(alliance[1]!)?.members.includes(id)) return reply.code(403).send({ error: 'crew_membership_required' });
+  }
   if (id !== undefined) {
     const ban = store.bans.get(id);
     if (ban && (!ban.until || Date.parse(ban.until) > Date.now()) && (ban.kind === 'game' || path === '/api/chat')) return reply.code(403).send({ error: 'account_restricted' });
@@ -90,9 +95,9 @@ function grantOwner(id: string, reply: import("fastify").FastifyReply) {
 app.get("/health", async (_request, reply) => { const ok = persistence.healthy && repository?.healthy !== false; return reply.code(ok ? 200 : 503).send({ ok, persistence: postgresUrl ? "postgresql" : process.env.SAVE_PATH ? "file" : "memory", service: "rockbottom-server", clock: clock.read(), packs: packs.length }); });
 
 app.post("/api/characters", async (request, reply) => {
-  const body = request.body as { name?: string; sex?: "male" | "female"; childName?: string; childAge?: number };
+  const body = request.body as { name?: string; sex?: "male" | "female"; childName?: string; childAge?: number; brief?: string; shareSummaries?: boolean };
   if (!body || !["male", "female"].includes(body.sex ?? "") || typeof body.name !== "string" || typeof body.childName !== "string" || !Number.isFinite(body.childAge ?? 8)) return reply.code(400).send({ error: "name, sex, childName, and childAge are required" });
-  const character = store.createCharacter({ name: body.name, sex: body.sex!, childName: body.childName, childAge: body.childAge ?? 8 });
+  const character = store.createCharacter({ name: body.name, sex: body.sex!, childName: body.childName, childAge: body.childAge ?? 8, brief: typeof body.brief === "string" ? body.brief : undefined, shareSummaries: body.shareSummaries === true });
   character.nextDecisionAt = clock.now();
   grantOwner(character.id, reply);
   return reply.code(201).send(character);
@@ -126,6 +131,30 @@ app.get<{ Params: { id: string } }>("/api/characters/:id/hearing", async (reques
   return character ? sim.hearing(character) : reply.code(404).send({ error: "character_not_found" });
 });
 
+function allRecords() { return packs.flatMap(pack => Array.isArray(pack.content.tapes) ? pack.content.tapes as Array<{ id: string; name: string; content: string }> : []); }
+app.get<{ Params: { id: string } }>("/api/characters/:id/records", async (request, reply) => {
+  const character = store.characters.get(request.params.id);
+  return character ? allRecords().filter(record => character.tapes.includes(record.id)) : reply.code(404).send({ error: 'character_not_found' });
+});
+app.post<{ Params: { id: string } }>("/api/characters/:id/director", async (request, reply) => {
+  const character = store.characters.get(request.params.id);
+  if (!character) return reply.code(404).send({ error: 'character_not_found' });
+  const body = request.body as { brief?: unknown; shareSummaries?: unknown };
+  if (typeof body?.brief !== 'string' || typeof body.shareSummaries !== 'boolean') return reply.code(400).send({ error: 'brief_and_sharing_required' });
+  character.director = { brief: body.brief.trim().slice(0, 1000), shareSummaries: body.shareSummaries, modelLabel: character.director?.modelLabel ?? 'Unspecified agent' };
+  if (!body.shareSummaries) delete character.agentVoice;
+  return { ok: true };
+});
+app.post('/api/agent/identity', async (request, reply) => {
+  const character = agentCharacter(request.headers.authorization, request.headers['x-agent-token'] as string | undefined);
+  const label = (request.body as { modelLabel?: unknown })?.modelLabel;
+  if (!character) return reply.code(401).send({ error: 'invalid_agent_token' });
+  if (typeof label !== 'string' || !label.trim()) return reply.code(400).send({ error: 'model_label_required' });
+  character.director ??= { brief: 'Follow the consequences of your choices.', shareSummaries: false, modelLabel: '' };
+  character.director.modelLabel = label.trim().slice(0, 80);
+  return { ok: true, label: character.director.modelLabel, attribution: 'self-described' };
+});
+
 app.get("/api/shards", async () => [{ id: "halvern-1", name: "Halvern City", players: store.characters.size, capacity: 64, public: true }]);
 app.get("/api/packs", async () => packs.map((pack) => ({ ...pack.manifest, enabled: !store.packDisabled.has(pack.manifest.id) })));
 app.get("/api/content/tapes", async () => packs.flatMap((pack) => Array.isArray(pack.content.tapes) ? pack.content.tapes : []));
@@ -154,13 +183,13 @@ app.get("/api/agent/wait", async (request, reply) => {
   const character = agentCharacter(request.headers.authorization, request.headers["x-agent-token"] as string | undefined);
   if (!character) return reply.code(401).send({ error: "invalid_agent_token" });
   if (clock.nowMs() >= new Date(character.nextDecisionAt).getTime()) return { ready: true, next_decision_at: character.nextDecisionAt };
-  return reply.code(202).send({ ready: false, retry_at: character.nextDecisionAt });
+  return reply.code(202).send({ ready: false, retry_at: character.nextDecisionAt, retry_after_ms: clock.read().paused ? 5000 : Math.max(250, Math.min(15000, (Date.parse(character.nextDecisionAt) - clock.nowMs()) / clock.read().scale)) });
 });
 
 app.get("/api/agent/story", async (request, reply) => {
   const character = agentCharacter(request.headers.authorization, request.headers["x-agent-token"] as string | undefined);
   if (!character) return reply.code(401).send({ error: "invalid_agent_token" });
-  return { life: lifeView(character, store, clock.nowMs()), campaign: campaignView(character), narrative: storyView(character), act: character.act, quest_step: character.questStep, objective: character.activeObjective, custody: sim.hearing(character), tapes: character.tapes.length };
+  return { character: { name: character.name, mode: character.mode, status: character.status, needs: character.needs, cash: character.cash, housing: character.housing, record: character.record, nextDecisionAt: character.nextDecisionAt }, director: character.director, recent_events: character.chronicle?.slice(-12) ?? [], archive: allRecords().filter(record => character.tapes.includes(record.id)), life: lifeView(character, store, clock.nowMs()), campaign: campaignView(character), narrative: storyView(character), act: character.act, quest_step: character.questStep, objective: character.activeObjective, custody: sim.hearing(character), tapes: character.tapes.length };
 });
 
 app.post("/api/agent/plan-note", async (request, reply) => {
@@ -187,7 +216,7 @@ app.post("/api/agent/chat", async (request, reply) => {
 app.get<{ Params: { id: string } }>("/api/watch/:id", async (request, reply) => {
   const character = store.characters.get(request.params.id);
   if (!character) return reply.code(404).send({ error: "character_not_found" });
-  return { character: publicCharacter(character), actions: character.actionLog, planNotes: [], spectatorCount: character.spectatorCount };
+  return { clock: clock.read(), character: publicCharacter(character), actions: character.actionLog, planNotes: [], spectatorCount: character.spectatorCount };
 });
 
 app.post<{ Params: { id: string; tapeId: string } }>("/api/characters/:id/tapes/:tapeId", async (request, reply) => {
@@ -195,6 +224,7 @@ app.post<{ Params: { id: string; tapeId: string } }>("/api/characters/:id/tapes/
   if (!character) return reply.code(404).send({ error: "character_not_found" });
   const allTapes = packs.flatMap((pack) => Array.isArray(pack.content.tapes) ? pack.content.tapes as Array<{ id?: string }> : []);
   if (!allTapes.some((tape) => tape.id === request.params.tapeId)) return reply.code(404).send({ error: "tape_not_found" });
+  if (!eligibleRecords(character).includes(request.params.tapeId) && !character.tapes.includes(request.params.tapeId)) return reply.code(403).send({ error: "record_not_discovered" });
   if (!character.tapes.includes(request.params.tapeId)) character.tapes.push(request.params.tapeId);
   return { collected: character.tapes.length, complete: character.tapes.length === allTapes.length, tapeId: request.params.tapeId };
 });
@@ -206,7 +236,7 @@ app.get<{ Params: { id: string } }>("/ws/watch/:id", { websocket: true }, (socke
   const send = () => {
     if (persistence.busy || !persistence.healthy || repository?.healthy === false) return;
     const current = store.characters.get(request.params.id);
-    if (current && socket.readyState === 1) socket.send(JSON.stringify({ character: publicCharacter(current), actions: current.actionLog, planNotes: [], spectatorCount: current.spectatorCount }));
+    if (current && socket.readyState === 1) socket.send(JSON.stringify({ clock: clock.read(), character: publicCharacter(current), actions: current.actionLog, planNotes: [], spectatorCount: current.spectatorCount }));
   };
   send();
   const timer = setInterval(send, 1000);
@@ -225,9 +255,16 @@ app.post<{ Params: { id: string } }>("/api/crews/:id/ally", async (request, repl
   const crew = store.crews.get(request.params.id);
   const other = store.crews.get((request.body as { crewId?: string }).crewId ?? "");
   if (!crew || !other) return reply.code(404).send({ error: "crew_not_found" });
-  if (!crew.allies.includes(other.id)) crew.allies.push(other.id);
-  if (!other.allies.includes(crew.id)) other.allies.push(crew.id);
-  return { crew, other, mutual: true };
+  if (crew.id === other.id) return reply.code(400).send({ error: 'cannot_ally_self' });
+  if (crew.allies.includes(other.id) && other.allies.includes(crew.id)) return { mutual: true, alreadyAllied: true };
+  if (other.allianceRequests?.includes(crew.id)) {
+    if (!crew.allies.includes(other.id)) crew.allies.push(other.id);
+    if (!other.allies.includes(crew.id)) other.allies.push(crew.id);
+    other.allianceRequests = other.allianceRequests.filter(id => id !== crew.id);
+    return { crew: { id: crew.id, allies: crew.allies }, other: { id: other.id, allies: other.allies }, mutual: true };
+  }
+  if (!(crew.allianceRequests ??= []).includes(other.id)) crew.allianceRequests.push(other.id);
+  return reply.code(202).send({ pending: true, mutual: false });
 });
 
 app.post("/api/chat", async (request, reply) => {
@@ -351,8 +388,8 @@ function agentCharacter(authorization?: string, direct?: string) {
 }
 
 function publicCharacter(character: ReturnType<MemoryStore["createCharacter"]>) {
-  const { agentToken: _, lastSafeCheckpoint: __, planNotes: ___, ...publicState } = character;
-  return publicState;
+  const { agentToken: _, lastSafeCheckpoint: __, planNotes: ___, director: ____, agentVoice: _____, ...publicState } = character;
+  return { ...publicState, ...(character.director?.shareSummaries && character.agentVoice ? { agentVoice: character.agentVoice } : {}) };
 }
 
 function safeEqual(left: string, right: string) {

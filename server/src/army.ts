@@ -51,12 +51,12 @@ export function armyView(c: CharacterState, now: number): LifeView {
   const question = a?.phase === 'assessment' ? QUESTIONS[a.assessment.index]?.[0] : undefined;
   return { title: 'Army service', summary: a ? [question ?? `${a.phase} · ${a.rank} · term ${a.term}`, `Training ${a.trainingDays}/3 days; next input: ${a.drill ? INPUTS[a.drill.index] : 'none'}.`, `Assessment deadline ${a.assessment.deadline}.`, `Gross paid $${a.grossPaid}; support $${a.supportPaid}.`, ...(a.nextPay ? [`Next payday ${a.nextPay}; term end ${a.termEnd}.`] : [])] : ['A full timed battery, three days of training, sixty-day terms and weekly automatic support transfers.'], commands };
 }
-export function armyAction(c: CharacterState, p: Record<string, unknown>, now: number): SystemResult {
+export function armyAction(c: CharacterState, p: Record<string, unknown>, now: number, timeScale = 1): SystemResult {
   if (!armyEligible(c)) return deny('Army service is unavailable on this path or after the archive opens.');
   let a = c.army;
   if (p.op === 'enroll') {
     if (a) return deny('An enlistment record already exists.');
-    c.army = { version: 1, phase: 'assessment', assessment: { index: 0, correct: 0, deadline: new Date(now + 180000).toISOString(), finished: false }, trainingDays: 0, discipline: 0, term: 1, paychecks: 0, grossPaid: 0, supportPaid: 0, rank: 'E-1', allotment: .2, squad: { petty: true, dominguez: true, bond: 0 }, rotation: 0, history: [] };
+    c.army = { version: 1, phase: 'assessment', assessment: { index: 0, correct: 0, deadline: new Date(now + 180000 * Math.max(1, timeScale)).toISOString(), finished: false }, trainingDays: 0, discipline: 0, term: 1, paychecks: 0, grossPaid: 0, supportPaid: 0, rank: 'E-1', allotment: .2, squad: { petty: true, dominguez: true, bond: 0 }, rotation: 0, history: [] };
     return done('The battery begins. Twelve answers; three game minutes. Unanswered questions do not count as correct.', 0, true);
   }
   if (!a) return deny('Begin the assessment first.');
@@ -75,7 +75,7 @@ export function armyAction(c: CharacterState, p: Record<string, unknown>, now: n
     return done(`Answer ${a.assessment.index}/12 recorded.`, 0, true);
   }
   if (a.phase === 'training') {
-    if (p.op === 'start-drill' && !a.drill) { a.drill = { index: 0, mistakes: 0, deadline: new Date(now + 18000).toISOString() }; return done('Crawl, wall, balance, carry, hold. Follow the displayed input sequence before the eighteen-second deadline.', 0, true); }
+    if (p.op === 'start-drill' && !a.drill) { a.drill = { index: 0, mistakes: 0, deadline: new Date(now + 18000 * Math.max(1, timeScale)).toISOString() }; return done('Crawl, wall, balance, carry, hold. Follow the displayed input sequence before the eighteen-second deadline.', 0, true); }
     if (p.op !== 'input' || !a.drill || !INPUTS.includes(String(p.input))) return deny('Start a drill and submit a displayed input.');
     if (now >= Date.parse(a.drill.deadline)) { delete a.drill; return done('The whistle goes. Vance schedules another attempt after rest, not another person to blame.', 60); }
     if (p.input !== INPUTS[a.drill.index]) a.drill.mistakes++;

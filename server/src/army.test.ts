@@ -62,3 +62,7 @@ it('checkpoint recovery preserves paid wages and completed progress', () => {
   const { c, store, clock, sim } = train(); c.cash = 400; c.lastSafeCheckpoint = { cash: 4, location: 'Mercy House Shelter' }; c.status = 'stuck';
   store.runtime(c.id).stuckSince = clock.nowMs() - 31 * 60000; sim.tick(); expect(c.cash).toBe(400); expect(c.army?.trainingDays).toBe(3);
 });
+it('preserves usable timed windows on an accelerated shard', () => {
+  const { c, clock, sim } = setup(); clock.update({ scale: 60, paused: true });
+  sim.act(c, 'army_action', { op: 'enroll' }); expect(Date.parse(c.army!.assessment.deadline) - clock.nowMs()).toBe(180000 * 60);
+});
