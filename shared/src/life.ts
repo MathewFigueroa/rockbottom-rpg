@@ -14,3 +14,12 @@ export interface ArmyState {
   deployed?: { id: number; due: string; risk: number; squadRisk: number; gross: number; withSquad: boolean; tactic: string };
   history: Array<{ id: number; at: string; risk: number; roll: number; survived: boolean; petty: boolean; dominguez: boolean }>;
 }
+export interface MarketState { day: number; serial: number; offers: Record<string, { price: number; stock: number }> }
+export interface StreetItem { id: string; sku: string; paid: number; inspected: boolean; defective?: boolean; repaired: boolean; stolen: boolean }
+export interface StreetEvidence { id: string; kind: 'fencing' | 'fraud'; at: string; resolved: boolean; restitution: boolean }
+export interface StreetState {
+  version: 1; caseNumber?: number; items: StreetItem[]; evidence: StreetEvidence[];
+  lastCourierDay: number; courier?: { id: string; due: string; deadline: string; opened: boolean };
+  legal?: { id: string; status: 'summons' | 'jailed' | 'released' | 'closed'; evidence: string[]; escrow: number; hearingAt?: string; defender: boolean; called: boolean; outcome?: 'diversion' | 'convicted' };
+  communityDays: number; repairedCase?: string;
+}

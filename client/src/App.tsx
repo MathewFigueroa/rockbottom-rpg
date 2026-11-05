@@ -87,7 +87,7 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
     if (!character || busy) return;
     if (action === "attend_visitation" && !force) { setVisitationOpen(true); return; }
     setBusy(true);
-    try { const result = await api.action(character.id, action, params); const updated = await api.character(character.id); setCharacter(updated); setCampaignPanel(action === "army_action" ? "life" : updated.storyChoices?.length ? "story" : "quests"); setMessage(["story_decision", "quest_choice", "army_action"].includes(action) ? "" : result.message); } catch (reason) { setMessage(reason instanceof Error ? reason.message : "Action failed"); } finally { setBusy(false); }
+    try { const result = await api.action(character.id, action, params); const updated = await api.character(character.id); setCharacter(updated); setCampaignPanel(["army_action", "street_action"].includes(action) ? "life" : updated.storyChoices?.length ? "story" : "quests"); setMessage(["story_decision", "quest_choice", "army_action", "street_action"].includes(action) ? "" : result.message); } catch (reason) { setMessage(reason instanceof Error ? reason.message : "Action failed"); } finally { setBusy(false); }
   };
   const setMode = async (mode: ControlMode) => { if (!character) return; setCharacter(await api.mode(character.id, mode)); };
   if (error) return <main className="fatal"><h1>Halvern is out of reach</h1><p>{error}</p><button onClick={onExit}>Return to title</button></main>;

@@ -1,3 +1,4 @@
+import { addEvidence } from "./streets.js";
 import { createHash } from 'node:crypto';
 import { CAMPAIGN_QUESTS, calculateCustody, type CampaignState, type CharacterState, type QuestDefinition, type QuestOption } from '@rockbottom/shared';
 
@@ -10,7 +11,7 @@ export function completed(c: CharacterState, id: string) {
 }
 function unlocked(c: CharacterState, q: QuestDefinition) {
   if (completed(c, q.id)) return false;
-  if (q.id === 'the-frame') return c.status === 'dead' || (completed(c, 'day-thirty') && (!c.army || c.army.phase === 'discharged'));
+  if (q.id === 'the-frame') return c.status === 'dead' || (completed(c, 'day-thirty') && (!c.army || c.army.phase === 'discharged') && !c.street?.evidence.some(e => !e.resolved));
   if (c.status === 'dead' || c.act < 2 || (c.story?.stage ?? 0) < 2) return false;
   if (q.path && q.path !== c.story?.path) return false;
   if (q.after && !completed(c, q.after)) return false;
@@ -53,6 +54,8 @@ export function advanceQuest(c: CharacterState, params: Record<string, unknown>,
   c.record = Math.max(0, Math.min(10, c.record + (option.record ?? 0)));
   if (option.trust) state.trust[option.trust.person] = Math.max(-100, Math.min(100, state.trust[option.trust.person] + option.trust.delta));
   if (option.flag && !state.flags.includes(option.flag)) state.flags.push(option.flag);
+  if (q.id === 'the-flip' && option.id === 'fence') addEvidence(c, 'fencing', now, `${c.id}:quest:bracelet`);
+  if (q.id === 'the-flip' && option.id === 'hide') { addEvidence(c, 'fraud', now, `${c.id}:quest:radio`); c.heat = Math.min(100, c.heat + 12); }
   let message = option.detail;
   let minutes = stage.minutes;
   let roll: number | undefined;
