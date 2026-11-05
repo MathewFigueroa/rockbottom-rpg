@@ -7,14 +7,21 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypt
 import { loadPacks } from "./packs.js";
 import { GameClock, MemoryStore } from "./store.js";
 import { storyView } from "./story.js";
+import { PostgresRepository } from "./postgres.js";
+import { PersistenceCoordinator } from "./persistence.js";
 import { Simulation } from "./simulation.js";
 
-if (process.env.NODE_ENV === "production" && (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD === "change-me-now" || (process.env.ADMIN_SESSION_SECRET?.length ?? 0) < 32 || !process.env.CLIENT_ORIGIN || !process.env.SAVE_PATH)) throw new Error("Production requires ADMIN_PASSWORD, a 32-character ADMIN_SESSION_SECRET, CLIENT_ORIGIN and SAVE_PATH");
+const postgresUrl = process.env.DATABASE_URL?.match(/^postgres(?:ql)?:\/\//) ? process.env.DATABASE_URL : undefined;
+if (process.env.NODE_ENV === "production" && (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD === "change-me-now" || (process.env.ADMIN_SESSION_SECRET?.length ?? 0) < 32 || !process.env.CLIENT_ORIGIN || (!process.env.SAVE_PATH && !postgresUrl))) throw new Error("Production requires ADMIN_PASSWORD, a 32-character ADMIN_SESSION_SECRET, CLIENT_ORIGIN and SAVE_PATH or PostgreSQL DATABASE_URL");
 const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
-const store = new MemoryStore(process.env.SAVE_PATH);
+const repository = postgresUrl ? await PostgresRepository.connect(postgresUrl) : undefined;
+const store = new MemoryStore(postgresUrl ? undefined : process.env.SAVE_PATH);
+const restored = await repository?.load();
+if (restored) store.restore(restored);
 const clock = new GameClock();
 if (store.clockState) clock.update(store.clockState);
-function checkpoint() { store.clockState = clock.read(); store.save(); }
+const persistence = new PersistenceCoordinator(store, clock, repository);
+store.clockState = clock.read();
 const sim = new Simulation(store, clock);
 const packs = await loadPacks();
 const adminSessions = new Set<string>();
@@ -23,6 +30,17 @@ await app.register(cors, { origin: (process.env.CLIENT_ORIGIN ?? "http://localho
 await app.register(cookie, { secret: process.env.ADMIN_SESSION_SECRET ?? "dev-only-secret-change-this-32-chars" });
 await app.register(rateLimit, { max: 1000, timeWindow: "1 minute" });
 await app.register(websocket);
+
+const operations = new WeakMap<import("fastify").FastifyRequest, { release: () => void; before: ReturnType<MemoryStore["snapshot"]> }>();
+app.addHook("preHandler", async (request, reply) => {
+  if (request.url.startsWith('/ws/') || request.url === '/health') return;
+  const release = await persistence.acquire();
+  if (!persistence.healthy || repository?.healthy === false) {
+    release(); return reply.code(503).send({ error: 'persistence_unavailable' });
+  }
+  store.clockState = clock.read();
+  operations.set(request, { release, before: store.snapshot() });
+});
 
 // Owner credentials are separate from agent credentials and never accepted from request bodies.
 app.addHook("preHandler", async (request, reply) => {
@@ -41,7 +59,19 @@ app.addHook("preHandler", async (request, reply) => {
   }
 });
 app.addHook("onSend", async (request, reply, payload) => {
-  if (request.method === "POST" && reply.statusCode < 400) checkpoint();
+  const operation = operations.get(request);
+  if (operation) {
+    operations.delete(request);
+    try {
+      if (reply.statusCode >= 500) persistence.restore(operation.before);
+      else if (request.method === 'POST') await persistence.commit(`${request.method} ${request.routeOptions.url}`);
+    } catch (error) {
+      persistence.restore(operation.before);
+      // Never return an owner cookie for a character whose creation was not acknowledged.
+      reply.removeHeader('set-cookie');
+      throw new Error("persistence_unavailable");
+    } finally { operation.release(); }
+  }
   // Tokens and private notes must never escape through action, watch, or admin snapshots.
   if (typeof payload === "string" && reply.getHeader("content-type")?.toString().includes("application/json")) {
     const ownerView = /^\/api\/(characters|demo)\//.test(request.url) || request.url === "/api/characters";
@@ -55,12 +85,13 @@ function grantOwner(id: string, reply: import("fastify").FastifyReply) {
   reply.setCookie(`rb_owner_${id}`, token, { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 2592000 });
 }
 
-app.get("/health", async () => ({ ok: true, service: "rockbottom-server", clock: clock.read(), packs: packs.length }));
+app.get("/health", async (_request, reply) => { const ok = persistence.healthy && repository?.healthy !== false; return reply.code(ok ? 200 : 503).send({ ok, persistence: postgresUrl ? "postgresql" : process.env.SAVE_PATH ? "file" : "memory", service: "rockbottom-server", clock: clock.read(), packs: packs.length }); });
 
 app.post("/api/characters", async (request, reply) => {
   const body = request.body as { name?: string; sex?: "male" | "female"; childName?: string; childAge?: number };
   if (!body || !["male", "female"].includes(body.sex ?? "") || typeof body.name !== "string" || typeof body.childName !== "string" || !Number.isFinite(body.childAge ?? 8)) return reply.code(400).send({ error: "name, sex, childName, and childAge are required" });
   const character = store.createCharacter({ name: body.name, sex: body.sex!, childName: body.childName, childAge: body.childAge ?? 8 });
+  character.nextDecisionAt = clock.now();
   grantOwner(character.id, reply);
   return reply.code(201).send(character);
 });
@@ -170,10 +201,14 @@ app.get<{ Params: { id: string } }>("/ws/watch/:id", { websocket: true }, (socke
   const character = store.characters.get(request.params.id);
   if (!character) return socket.close(1008, "character_not_found");
   character.spectatorCount += 1;
-  const send = () => socket.readyState === 1 && socket.send(JSON.stringify({ character: publicCharacter(character), actions: character.actionLog, planNotes: [], spectatorCount: character.spectatorCount }));
+  const send = () => {
+    if (persistence.busy || !persistence.healthy || repository?.healthy === false) return;
+    const current = store.characters.get(request.params.id);
+    if (current && socket.readyState === 1) socket.send(JSON.stringify({ character: publicCharacter(current), actions: current.actionLog, planNotes: [], spectatorCount: current.spectatorCount }));
+  };
   send();
   const timer = setInterval(send, 1000);
-  socket.on("close", () => { clearInterval(timer); character.spectatorCount = Math.max(0, character.spectatorCount - 1); });
+  socket.on("close", () => { clearInterval(timer); const current = store.characters.get(request.params.id); if (current) current.spectatorCount = Math.max(0, current.spectatorCount - 1); });
 });
 
 app.post("/api/crews", async (request, reply) => {
@@ -281,13 +316,30 @@ app.post<{ Params: { scene: string } }>("/api/demo/:scene", async (request, repl
   if (scene === "army" || scene === "honor") { character.act = 2; character.location = "Fort Halvern Annex"; character.activeObjective = "The Score: complete the aptitude assessment."; }
   if (scene === "reveal") { character.act = 3; character.tapes = Array.from({ length: 24 }, (_, index) => `tape-${String(index + 1).padStart(2, "0")}`); }
   if (scene === "honor") character.status = "dead";
+  character.nextDecisionAt = clock.now();
   grantOwner(character.id, reply);
   return reply.code(201).send(character);
 });
 
-const ticker = setInterval(() => { sim.tick(); }, 250);
-const saver = setInterval(checkpoint, 5000);
-app.addHook("onClose", async () => { clearInterval(ticker); clearInterval(saver); checkpoint(); });
+async function background(reason: string, tick = false) {
+  if (persistence.busy || !persistence.healthy || repository?.healthy === false) return;
+  const release = await persistence.acquire();
+  store.clockState = clock.read();
+  const before = store.snapshot();
+  try {
+    if (tick) sim.tick();
+    if (!tick || JSON.stringify(before) !== JSON.stringify(store.snapshot())) await persistence.commit(reason);
+  } catch (error) { persistence.restore(before); app.log.error(error, 'World persistence failed; requests disabled'); }
+  finally { release(); }
+}
+const ticker = setInterval(() => { void background('simulation_tick', true); }, 250);
+const saver = setInterval(() => { void background('clock_checkpoint'); }, 5000);
+app.addHook("onClose", async () => {
+  clearInterval(ticker); clearInterval(saver);
+  const release = await persistence.acquire();
+  try { if (persistence.healthy && repository?.healthy !== false) await persistence.commit('shutdown'); }
+  finally { release(); await repository?.close(); }
+});
 
 function agentCharacter(authorization?: string, direct?: string) {
   const token = direct ?? authorization?.replace(/^Bearer\s+/i, "");

@@ -16,7 +16,18 @@ services:
       - caddy_config:/config
     depends_on:
       server: { condition: service_healthy }
-      client: { condition: service_healthy }
+      migrate:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    command: ["node", "server/dist/migrate.js"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rockbottom}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rockbottom}
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  client: { condition: service_healthy }
       admin: { condition: service_healthy }
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2019/config/"]
@@ -33,7 +44,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: ${DATABASE_URL:-}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rockbottom}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rockbottom}
       REDIS_URL: redis://redis:6379
       SAVE_PATH: /app/data/world.json
       CLIENT_ORIGIN: https://${DOMAIN:?Set DOMAIN}
@@ -46,6 +57,7 @@ services:
       STUCK_FAILED_ACTIONS: ${STUCK_FAILED_ACTIONS:-5}
       STUCK_RESET_MINUTES: ${STUCK_RESET_MINUTES:-30}
     depends_on:
+      migrate: { condition: service_completed_successfully }
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
     healthcheck:

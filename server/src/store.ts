@@ -47,11 +47,27 @@ export class MemoryStore {
   readonly owners = new Map<string, string>();
   constructor(private readonly savePath?: string) {
     if (!savePath || !existsSync(savePath)) return;
-    const data = JSON.parse(readFileSync(savePath, "utf8"));
+    this.restore(JSON.parse(readFileSync(savePath, "utf8")));
+  }
+  snapshot(): WorldSnapshot {
+    return structuredClone({ version: 1, clockState: this.clockState,
+      characters: [...this.characters], runtimes: [...this.runtimes], crews: [...this.crews],
+      bans: [...this.bans], owners: [...this.owners], moderationCases: this.moderationCases,
+      chat: this.chat.slice(-500), packDisabled: [...this.packDisabled],
+      cashFaucets: this.cashFaucets, cashSinks: this.cashSinks });
+  }
+  restore(data: WorldSnapshot) {
     if (data.version !== 1) throw new Error("Unsupported save version");
-    for (const key of ["characters", "runtimes", "crews", "bans", "owners"] as const) for (const [id, value] of data[key]) (this[key] as Map<string, any>).set(id, value);
-    this.moderationCases.push(...data.moderationCases);
-    this.chat.push(...data.chat);
+    for (const key of ["characters", "runtimes", "crews", "bans", "owners"] as const) {
+      if (!Array.isArray(data[key])) throw new Error(`Invalid world snapshot: ${key}`);
+    }
+    for (const key of ["characters", "runtimes", "crews", "bans", "owners"] as const) {
+      this[key].clear();
+      for (const [id, value] of data[key]) (this[key] as Map<string, unknown>).set(id, structuredClone(value));
+    }
+    this.moderationCases.splice(0, this.moderationCases.length, ...structuredClone(data.moderationCases));
+    this.chat.splice(0, this.chat.length, ...structuredClone(data.chat));
+    this.packDisabled.clear();
     for (const id of data.packDisabled) this.packDisabled.add(id);
     this.clockState = data.clockState;
     this.cashFaucets = data.cashFaucets; this.cashSinks = data.cashSinks;
@@ -60,9 +76,7 @@ export class MemoryStore {
   save() {
     if (!this.savePath) return;
     mkdirSync(dirname(this.savePath), { recursive: true });
-    const data: Record<string, unknown> = { version: 1, clockState: this.clockState, moderationCases: this.moderationCases, chat: this.chat.slice(-500), packDisabled: [...this.packDisabled], cashFaucets: this.cashFaucets, cashSinks: this.cashSinks };
-    for (const key of ["characters", "runtimes", "crews", "bans", "owners"] as const) data[key] = [...this[key]];
-    writeFileSync(`${this.savePath}.tmp`, JSON.stringify(data), { mode: 0o600 });
+    writeFileSync(`${this.savePath}.tmp`, JSON.stringify(this.snapshot()), { mode: 0o600 });
     renameSync(`${this.savePath}.tmp`, this.savePath);
   }
   readonly characters = new Map<string, CharacterState>();
@@ -163,4 +177,19 @@ export class GameClock {
     if (typeof input.stuckResetMinutes === "number") this.state.stuckResetMinutes = Math.max(1, input.stuckResetMinutes);
     return this.read();
   }
+}
+
+export interface WorldSnapshot {
+  version: 1;
+  clockState?: ClockState;
+  characters: Array<[string, CharacterState]>;
+  runtimes: Array<[string, AgentRuntime]>;
+  crews: Array<[string, Crew]>;
+  bans: Array<[string, { until: string | null; kind: string }]>;
+  owners: Array<[string, string]>;
+  moderationCases: ModerationCase[];
+  chat: MemoryStore["chat"];
+  packDisabled: string[];
+  cashFaucets: number;
+  cashSinks: number;
 }

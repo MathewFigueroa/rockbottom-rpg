@@ -10,6 +10,7 @@ FROM node:22-alpine
 RUN addgroup -S rockbottom && adduser -S rockbottom -G rockbottom
 WORKDIR /app
 COPY --from=build /runtime/server ./server
+COPY --from=build /app/server/migrations ./server/migrations
 COPY --from=build /app/packs ./packs
 COPY package.json ./package.json
 RUN mkdir -p /app/data && chown rockbottom:rockbottom /app/data
