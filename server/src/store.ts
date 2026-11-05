@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomBytes, randomUUID } from "node:crypto";
-import type { CharacterState, ClockState, ParentSex } from "@rockbottom/shared";
+import type { CharacterState, ClockState, ParentSex, MarketState } from "@rockbottom/shared";
 
 export interface CharacterCreateInput {
   name: string;
@@ -44,6 +44,7 @@ export interface ModerationCase {
 }
 
 export class MemoryStore {
+  market: MarketState = { day: -1, serial: 0, offers: {} };
   clockState: ClockState | undefined;
   readonly owners = new Map<string, string>();
   constructor(private readonly savePath?: string) {
@@ -51,7 +52,7 @@ export class MemoryStore {
     this.restore(JSON.parse(readFileSync(savePath, "utf8")));
   }
   snapshot(): WorldSnapshot {
-    return structuredClone({ version: 1, clockState: this.clockState,
+    return structuredClone({ version: 1, market: this.market, clockState: this.clockState,
       characters: [...this.characters], runtimes: [...this.runtimes], crews: [...this.crews],
       bans: [...this.bans], owners: [...this.owners], moderationCases: this.moderationCases,
       chat: this.chat.slice(-500), packDisabled: [...this.packDisabled],
@@ -70,6 +71,7 @@ export class MemoryStore {
     this.chat.splice(0, this.chat.length, ...structuredClone(data.chat));
     this.packDisabled.clear();
     for (const id of data.packDisabled) this.packDisabled.add(id);
+    this.market = structuredClone(data.market ?? { day: -1, serial: 0, offers: {} });
     this.clockState = data.clockState;
     this.cashFaucets = data.cashFaucets; this.cashSinks = data.cashSinks;
     for (const c of this.characters.values()) c.spectatorCount = 0;
@@ -181,6 +183,7 @@ export class GameClock {
 }
 
 export interface WorldSnapshot {
+  market?: MarketState;
   version: 1;
   clockState?: ClockState;
   characters: Array<[string, CharacterState]>;

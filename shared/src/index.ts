@@ -1,4 +1,4 @@
-import type { ArmyState, LifeView, ChronicleEvent } from "./life.js";
+import type { ArmyState, LifeView, ChronicleEvent, StreetState } from "./life.js";
 export * from "./life.js";
 import type { CampaignState } from "./campaign.js";
 export * from "./campaign.js";
@@ -16,6 +16,7 @@ export interface Needs {
 
 export interface CharacterState {
   army?: ArmyState;
+  street?: StreetState;
   lifeView?: LifeView;
   chronicle?: ChronicleEvent[];
   campaign?: CampaignState;
@@ -122,6 +123,7 @@ export const ACTIONS = [
   "story_decision",
   "quest_choice",
   "army_action",
+  "street_action",
 ] as const;
 export type GameAction = (typeof ACTIONS)[number];
 

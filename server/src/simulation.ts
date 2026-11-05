@@ -1,3 +1,4 @@
+import { streetAction, settleStreet } from "./streets.js";
 import { armyAction, settleArmy } from "./army.js";
 import { randomBytes } from "node:crypto";
 import { advanceQuest, campaignView } from "./campaign.js";
@@ -31,12 +32,16 @@ export class Simulation {
     if (!ACTIONS.includes(action as GameAction)) return this.fail(character, action, "Unknown action.");
     const now = this.clock.nowMs();
     const seed = () => this.store.runtime(character.id).randomSeed ??= randomBytes(32).toString('hex');
-    this.store.cashFaucets += settleArmy(character, now, seed());
+    this.store.cashFaucets += settleArmy(character, now, seed()) + settleStreet(character, now);
     if (character.status === 'dead' && action !== 'quest_choice') return { ok: false, message: 'This life has ended.', state: character };
     if (character.army?.deployed) return { ok: false, message: 'The rotation resolves at the scheduled return.', retry_at: character.army.deployed.due, state: character };
+    if (character.street?.courier) return { ok: false, message: 'The courier route is in progress.', retry_at: character.street.courier.due, state: character };
+    const jailed = character.street?.legal?.status === 'jailed';
+    if (jailed && action !== 'street_action') return { ok: false, message: 'Only legal-aid decisions are available until release.', retry_at: character.street!.legal!.hearingAt, state: character };
+    const legalInput = jailed && action === 'street_action' && ['call-dana', 'restitution'].includes(String(params.op));
     const microInput = action === 'army_action' && ['answer', 'finish-assessment', 'input'].includes(String(params.op));
     const availableAt = new Date(character.nextDecisionAt).getTime();
-    if (now < availableAt && !microInput) {
+    if (now < availableAt && !microInput && !legalInput) {
       return { ok: false, message: "The simulation is between decision points.", retry_at: character.nextDecisionAt, state: character };
     }
     if (agent && character.actedWindow === character.decisionWindow) character.decisionWindow += 1;
@@ -46,6 +51,11 @@ export class Simulation {
     let message = "Done.";
     let instant = false;
     switch (action as GameAction) {
+      case 'street_action': {
+        const result = streetAction(character, this.store, params, now, seed());
+        if (!result.ok) return this.fail(character, action, result.message);
+        message = result.message; durationMinutes = result.minutes; break;
+      }
       case 'army_action': {
         const result = armyAction(character, params, now);
         if (!result.ok) return this.fail(character, action, result.message);
@@ -170,7 +180,7 @@ export class Simulation {
     const spacingGameMs = this.clock.read().decisionSpacingSeconds * 1000;
     const durationGameMs = durationMinutes * 60_000;
     const nextGameMs = instant ? now : now + Math.max(spacingGameMs, durationGameMs);
-    character.nextDecisionAt = new Date(nextGameMs).toISOString();
+    character.nextDecisionAt = character.street?.legal?.status === 'jailed' ? character.street.legal.hearingAt! : new Date(nextGameMs).toISOString();
     if (character.status !== "dead") character.status = durationMinutes >= 400 ? action === "sleep_shelter" ? "sleeping" : "working" : durationMinutes > 5 ? "traveling" : "active";
     character.actionLog.unshift({ at: this.clock.now(), action, detail: message });
     character.actionLog = character.actionLog.slice(0, 30);
@@ -185,7 +195,7 @@ export class Simulation {
     runtime.observedAt = runtime.observedAt.filter((time) => now - time < 60_000);
     if (runtime.observedAt.length >= 6) return { ok: false, error: "observe_rate_limited", retry_at: new Date(runtime.observedAt[0]! + 60_000).toISOString() };
     runtime.observedAt.push(now);
-    const available = ACTIONS.map((name) => ({ name, params: name === "travel" ? { destination: "string" } : name === "story_decision" ? { choice: choices(character).join("|") } : name === "army_action" ? { op: "get_story_state" } : name === "quest_choice" ? { quest: "get_story_state", choice: "option_id", confirmPermanentDeath: "boolean" } : {} }));
+    const available = ACTIONS.map((name) => ({ name, params: name === "travel" ? { destination: "string" } : name === "story_decision" ? { choice: choices(character).join("|") } : name === "street_action" ? { op: "get_story_state" } : name === "army_action" ? { op: "get_story_state" } : name === "quest_choice" ? { quest: "get_story_state", choice: "option_id", confirmPermanentDeath: "boolean" } : {} }));
     return {
       ok: true,
       character: { id: character.id, name: character.name, mode: character.mode, status: character.status },
@@ -207,8 +217,8 @@ export class Simulation {
     const now = this.clock.nowMs();
     const config = this.clock.read();
     for (const character of this.store.characters.values()) {
-      this.store.cashFaucets += settleArmy(character, now, this.store.runtime(character.id).randomSeed ??= randomBytes(32).toString('hex'));
-      if (character.status === "dead" || character.campaign?.perspective === 'adult-child' || character.army?.deployed || character.army?.phase === 'assessment' || character.army?.drill) continue;
+      this.store.cashFaucets += settleArmy(character, now, this.store.runtime(character.id).randomSeed ??= randomBytes(32).toString('hex')) + settleStreet(character, now);
+      if (character.status === "dead" || character.campaign?.perspective === 'adult-child' || character.army?.deployed || character.army?.phase === 'assessment' || character.army?.drill || character.street?.legal?.status === 'jailed' || character.street?.courier) continue;
       const runtime = this.store.runtime(character.id);
       if (character.status === "stuck" && runtime.stuckSince && now - runtime.stuckSince >= config.stuckResetMinutes * 60_000) {
         // Recovery moves the actor; it must never roll back wages, evidence or quest state.
@@ -242,7 +252,7 @@ export class Simulation {
   }
 
   private park(character: CharacterState, reason: string) {
-    if (character.status === "dead" || character.status === "stuck") return;
+    if (character.status === "dead" || character.status === "stuck" || character.street?.legal?.status === 'jailed' || character.army?.deployed) return;
     const runtime = this.store.runtime(character.id);
     character.status = "stuck";
     runtime.stuckSince = this.clock.nowMs();

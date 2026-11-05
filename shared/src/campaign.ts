@@ -31,8 +31,8 @@ export const CAMPAIGN_QUESTS: readonly QuestDefinition[] = [
       { id: 'disclose', text: 'Write the fault on the tag', detail: 'The buyer pays eighteen and thanks you for leaving them a choice.', cash: 18, trust: { person: 'sam', delta: 12 }, flag: 'fault-disclosed' },
       { id: 'hide', text: 'Sell before it warms up', detail: 'Thirty dollars. Sam takes your receipt from the till and reads it twice.', cash: 30, trust: { person: 'sam', delta: -12 }, flag: 'fault-hidden' } ] },
     { id: 'heirloom', objective: 'An engraved bracelet matches a burglary notice. The family can identify it; a fence offers $220 without questions.', minutes: 60, options: [
-      { id: 'return', text: 'Return the engraved bracelet', detail: 'Sam calls the family. The woman who arrives recognizes an address on the evacuation list.', grit: 30, record: -1, income: 8, trust: { person: 'sam', delta: 10 }, flag: 'heirloom-returned' },
-      { id: 'fence', text: 'Fence it outside Sam’s shop', detail: 'The initials come off. A camera keeps the exchange. The money is real; so is the record.', cash: 220, heat: 18, record: 1, trust: { person: 'sam', delta: -15 }, flag: 'heirloom-fenced' } ] },
+      { id: 'return', text: 'Return the engraved bracelet', detail: 'Sam calls the family. The woman who arrives recognizes an address on the evacuation list.', grit: 30, income: 8, trust: { person: 'sam', delta: 10 }, flag: 'heirloom-returned' },
+      { id: 'fence', text: 'Fence it outside Sam’s shop', detail: 'The initials come off. A camera keeps the exchange. The money is real; the evidence will have to be answered in court.', cash: 220, heat: 18, trust: { person: 'sam', delta: -15 }, flag: 'heirloom-fenced' } ] },
   ] },
   { id: 'the-score', title: 'The Score · sign with open eyes', path: 'army', stages: [
     { id: 'terms', objective: 'Vale explains the compact aptitude assessment, regular pay and service allotment. This inquiry logistics placement is not a promise of custody.', minutes: 30, options: [
