@@ -33,11 +33,13 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: ${DATABASE_URL:-postgresql://rockbottom:rockbottom@postgres:5432/rockbottom}
+      DATABASE_URL: ${DATABASE_URL:-}
       REDIS_URL: redis://redis:6379
+      SAVE_PATH: /app/data/world.json
+      CLIENT_ORIGIN: https://${DOMAIN:?Set DOMAIN}
       ADMIN_USER: ${ADMIN_USER:-warden}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-now}
-      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-development-secret-change-this-now}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:?Set ADMIN_SESSION_SECRET}
       PREMIUM_ALL_FREE: ${PREMIUM_ALL_FREE:-true}
       DECISION_SPACING_SECONDS: ${DECISION_SPACING_SECONDS:-45}
       STUCK_MISSED_WINDOWS: ${STUCK_MISSED_WINDOWS:-3}
@@ -51,6 +53,8 @@ services:
       interval: 10s
       timeout: 4s
       retries: 10
+    volumes:
+      - world_data:/app/data
     mem_limit: 1024m
 
   client:
@@ -101,7 +105,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-rockbottom}
       POSTGRES_USER: ${POSTGRES_USER:-rockbottom}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rockbottom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -125,6 +129,7 @@ services:
     mem_limit: 384m
 
 volumes:
+  world_data:
   postgres_data:
   redis_data:
   caddy_data:

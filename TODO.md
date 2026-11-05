@@ -1,5 +1,7 @@
 # Registered production follow-ups
 
+See [Second Wind milestones](docs/SECOND_WIND_MILESTONES.md) for the current implemented slice, security boundaries, save adapter and remaining acceptance criteria.
+
 No listed item leaves a broken route. Each is shipped behind a working in-memory, deterministic, or no-op interface so local play and the acceptance suite remain complete.
 
 ## Persistence adapters

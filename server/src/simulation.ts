@@ -1,4 +1,5 @@
-import { ACTIONS, calculateCustody, type CharacterState, type GameAction } from "@rockbottom/shared";
+import { advanceStory, choices } from "./story.js";
+import { ACTIONS, STORY_PROMPTS, calculateCustody, type CharacterState, type GameAction } from "@rockbottom/shared";
 import { GameClock, MemoryStore } from "./store.js";
 
 export interface ActionResult {
@@ -9,6 +10,7 @@ export interface ActionResult {
 }
 
 const objectiveFor = (character: CharacterState): string => {
+  if (character.story && character.act > 1) return STORY_PROMPTS[character.story.stage] ?? "Keep Tuesday’s visit.";
   if (character.act > 1) return "Choose your line: build on the streets or enlist at Fort Halvern.";
   if (character.questStep === 0) return "Earn your first $50. Recycling and day labor are available.";
   if (character.questStep === 1) return "Claim a bed at Dana Reyes's shelter before curfew.";
@@ -21,10 +23,11 @@ export class Simulation {
   constructor(readonly store: MemoryStore, readonly clock: GameClock) {}
 
   act(character: CharacterState, action: string, params: Record<string, unknown> = {}, agent = false): ActionResult {
+    if (character.status === "dead") return { ok: false, message: "This life has ended.", state: character };
     if (!ACTIONS.includes(action as GameAction)) return this.fail(character, action, "Unknown action.");
     const now = this.clock.nowMs();
     const availableAt = new Date(character.nextDecisionAt).getTime();
-    if (agent && now < availableAt) {
+    if (now < availableAt) {
       return { ok: false, message: "The simulation is between decision points.", retry_at: character.nextDecisionAt, state: character };
     }
     if (agent && character.actedWindow === character.decisionWindow) character.decisionWindow += 1;
@@ -33,6 +36,11 @@ export class Simulation {
     let durationMinutes = 1;
     let message = "Done.";
     switch (action as GameAction) {
+      case "story_decision": {
+        const result = advanceStory(character, params.choice);
+        if (!result.ok) return this.fail(character, action, result.message);
+        message = `[${character.story!.events.at(-1)!.timeline}] ${result.message}`; durationMinutes = 30; break;
+      }
       case "collect_recycling":
         character.location = "Riverfront Recycling Center";
         character.cash += 18;
@@ -129,6 +137,7 @@ export class Simulation {
     if (character.questStep === 0 && character.cash >= 50) character.questStep = 1;
     if (character.questStep === 2 && character.shelterDays >= 7 && character.shiftsWorked >= 4) character.questStep = 3;
     character.activeObjective = objectiveFor(character);
+    this.store.runtime(character.id).repeatedFailures = 0;
     if (agent) {
       character.actedWindow = character.decisionWindow;
       const runtime = this.store.runtime(character.id);
@@ -153,7 +162,7 @@ export class Simulation {
     runtime.observedAt = runtime.observedAt.filter((time) => now - time < 60_000);
     if (runtime.observedAt.length >= 6) return { ok: false, error: "observe_rate_limited", retry_at: new Date(runtime.observedAt[0]! + 60_000).toISOString() };
     runtime.observedAt.push(now);
-    const available = ACTIONS.map((name) => ({ name, params: name === "travel" ? { destination: "string" } : {} }));
+    const available = ACTIONS.map((name) => ({ name, params: name === "travel" ? { destination: "string" } : name === "story_decision" ? { choice: choices(character).join("|") } : {} }));
     return {
       ok: true,
       character: { id: character.id, name: character.name, mode: character.mode, status: character.status },
@@ -175,6 +184,7 @@ export class Simulation {
     const now = this.clock.nowMs();
     const config = this.clock.read();
     for (const character of this.store.characters.values()) {
+      if (character.status === "dead") continue;
       const runtime = this.store.runtime(character.id);
       if (character.status === "stuck" && runtime.stuckSince && now - runtime.stuckSince >= config.stuckResetMinutes * 60_000) {
         Object.assign(character, character.lastSafeCheckpoint ?? {});
@@ -207,6 +217,7 @@ export class Simulation {
   }
 
   private park(character: CharacterState, reason: string) {
+    if (character.status === "dead" || character.status === "stuck") return;
     const runtime = this.store.runtime(character.id);
     character.status = "stuck";
     runtime.stuckSince = this.clock.nowMs();

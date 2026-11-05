@@ -6,26 +6,62 @@ import websocket from "@fastify/websocket";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { loadPacks } from "./packs.js";
 import { GameClock, MemoryStore } from "./store.js";
+import { storyView } from "./story.js";
 import { Simulation } from "./simulation.js";
 
+if (process.env.NODE_ENV === "production" && (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD === "change-me-now" || (process.env.ADMIN_SESSION_SECRET?.length ?? 0) < 32 || !process.env.CLIENT_ORIGIN || !process.env.SAVE_PATH)) throw new Error("Production requires ADMIN_PASSWORD, a 32-character ADMIN_SESSION_SECRET, CLIENT_ORIGIN and SAVE_PATH");
 const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
-const store = new MemoryStore();
+const store = new MemoryStore(process.env.SAVE_PATH);
 const clock = new GameClock();
+if (store.clockState) clock.update(store.clockState);
+function checkpoint() { store.clockState = clock.read(); store.save(); }
 const sim = new Simulation(store, clock);
 const packs = await loadPacks();
 const adminSessions = new Set<string>();
 
-await app.register(cors, { origin: true, credentials: true });
+await app.register(cors, { origin: (process.env.CLIENT_ORIGIN ?? "http://localhost:5173,http://localhost:5174").split(","), credentials: true });
 await app.register(cookie, { secret: process.env.ADMIN_SESSION_SECRET ?? "dev-only-secret-change-this-32-chars" });
 await app.register(rateLimit, { max: 1000, timeWindow: "1 minute" });
 await app.register(websocket);
+
+// Owner credentials are separate from agent credentials and never accepted from request bodies.
+app.addHook("preHandler", async (request, reply) => {
+  const path = request.url.split("?")[0]!;
+  if (request.method === "POST" && request.body === null) return reply.code(400).send({ error: "body_required" });
+  const match = path.match(/^\/api\/characters\/([^/]+)/);
+  const body = request.body as Record<string, unknown> | undefined;
+  let id = match?.[1];
+  if (["/api/chat", "/api/crews", "/api/reports"].includes(path) && request.method === "POST") id = String(body?.characterId ?? body?.reporterId ?? "");
+  if (/^\/api\/crews\/[^/]+\/ally$/.test(path)) return reply.code(409).send({ error: "mutual_alliance_consent_not_implemented" });
+  if (id !== undefined) {
+    const ban = store.bans.get(id);
+    if (ban && (!ban.until || Date.parse(ban.until) > Date.now()) && (ban.kind === 'game' || path === '/api/chat')) return reply.code(403).send({ error: 'account_restricted' });
+    const credential = request.cookies[`rb_owner_${id}`];
+    if (!credential || store.owners.get(id) !== createHash("sha256").update(credential).digest("hex")) return reply.code(401).send({ error: "owner_auth_required" });
+  }
+});
+app.addHook("onSend", async (request, reply, payload) => {
+  if (request.method === "POST" && reply.statusCode < 400) checkpoint();
+  // Tokens and private notes must never escape through action, watch, or admin snapshots.
+  if (typeof payload === "string" && reply.getHeader("content-type")?.toString().includes("application/json")) {
+    const ownerView = /^\/api\/(characters|demo)\//.test(request.url) || request.url === "/api/characters";
+    return JSON.stringify(JSON.parse(payload), (key, value) => key === "agentToken" && !ownerView ? undefined : key === "lastSafeCheckpoint" ? undefined : key === "planNotes" && !ownerView ? [] : value);
+  }
+  return payload;
+});
+function grantOwner(id: string, reply: import("fastify").FastifyReply) {
+  const token = randomBytes(32).toString("base64url");
+  store.owners.set(id, createHash("sha256").update(token).digest("hex"));
+  reply.setCookie(`rb_owner_${id}`, token, { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 2592000 });
+}
 
 app.get("/health", async () => ({ ok: true, service: "rockbottom-server", clock: clock.read(), packs: packs.length }));
 
 app.post("/api/characters", async (request, reply) => {
   const body = request.body as { name?: string; sex?: "male" | "female"; childName?: string; childAge?: number };
-  if (!body || !["male", "female"].includes(body.sex ?? "") || !body.name || !body.childName) return reply.code(400).send({ error: "name, sex, childName, and childAge are required" });
+  if (!body || !["male", "female"].includes(body.sex ?? "") || typeof body.name !== "string" || typeof body.childName !== "string" || !Number.isFinite(body.childAge ?? 8)) return reply.code(400).send({ error: "name, sex, childName, and childAge are required" });
   const character = store.createCharacter({ name: body.name, sex: body.sex!, childName: body.childName, childAge: body.childAge ?? 8 });
+  grantOwner(character.id, reply);
   return reply.code(201).send(character);
 });
 
@@ -37,11 +73,10 @@ app.get<{ Params: { id: string } }>("/api/characters/:id", async (request, reply
 app.post<{ Params: { id: string } }>("/api/characters/:id/mode", async (request, reply) => {
   const character = store.characters.get(request.params.id);
   if (!character) return reply.code(404).send({ error: "character_not_found" });
-  const mode = (request.body as { mode?: string }).mode;
+  const mode = (request.body as { mode?: string } | undefined)?.mode;
   if (mode !== "manual" && mode !== "agent") return reply.code(400).send({ error: "invalid_mode" });
   character.mode = mode;
-  character.nextDecisionAt = clock.now();
-  character.decisionWindow += 1;
+
   return character;
 });
 
@@ -92,7 +127,7 @@ app.get("/api/agent/wait", async (request, reply) => {
 app.get("/api/agent/story", async (request, reply) => {
   const character = agentCharacter(request.headers.authorization, request.headers["x-agent-token"] as string | undefined);
   if (!character) return reply.code(401).send({ error: "invalid_agent_token" });
-  return { act: character.act, quest_step: character.questStep, objective: character.activeObjective, custody: sim.hearing(character), tapes: character.tapes.length };
+  return { narrative: storyView(character), act: character.act, quest_step: character.questStep, objective: character.activeObjective, custody: sim.hearing(character), tapes: character.tapes.length };
 });
 
 app.post("/api/agent/plan-note", async (request, reply) => {
@@ -108,6 +143,8 @@ app.post("/api/agent/plan-note", async (request, reply) => {
 app.post("/api/agent/chat", async (request, reply) => {
   const character = agentCharacter(request.headers.authorization, request.headers["x-agent-token"] as string | undefined);
   if (!character) return reply.code(401).send({ error: "invalid_agent_token" });
+  const ban = store.bans.get(character.id);
+  if (ban && (!ban.until || Date.parse(ban.until) > Date.now())) return reply.code(403).send({ error: "communications_restricted" });
   const body = request.body as { channel?: string; message?: string };
   const entry = { id: randomUUID(), characterId: character.id, channel: body.channel?.slice(0, 20) || "proximity", message: body.message?.slice(0, 280) || "", at: clock.now() };
   store.chat.push(entry);
@@ -117,7 +154,7 @@ app.post("/api/agent/chat", async (request, reply) => {
 app.get<{ Params: { id: string } }>("/api/watch/:id", async (request, reply) => {
   const character = store.characters.get(request.params.id);
   if (!character) return reply.code(404).send({ error: "character_not_found" });
-  return { character: publicCharacter(character), actions: character.actionLog, planNotes: character.planNotes, spectatorCount: character.spectatorCount };
+  return { character: publicCharacter(character), actions: character.actionLog, planNotes: [], spectatorCount: character.spectatorCount };
 });
 
 app.post<{ Params: { id: string; tapeId: string } }>("/api/characters/:id/tapes/:tapeId", async (request, reply) => {
@@ -133,7 +170,7 @@ app.get<{ Params: { id: string } }>("/ws/watch/:id", { websocket: true }, (socke
   const character = store.characters.get(request.params.id);
   if (!character) return socket.close(1008, "character_not_found");
   character.spectatorCount += 1;
-  const send = () => socket.readyState === 1 && socket.send(JSON.stringify({ character: publicCharacter(character), actions: character.actionLog, planNotes: character.planNotes }));
+  const send = () => socket.readyState === 1 && socket.send(JSON.stringify({ character: publicCharacter(character), actions: character.actionLog, planNotes: [], spectatorCount: character.spectatorCount }));
   send();
   const timer = setInterval(send, 1000);
   socket.on("close", () => { clearInterval(timer); character.spectatorCount = Math.max(0, character.spectatorCount - 1); });
@@ -173,9 +210,9 @@ app.post("/api/reports", async (request, reply) => {
   const penalty = flagNumber === 1 ? "1 hour communications ban" : flagNumber === 2 ? "24 hour game ban" : "permanent account, IP, and device-fingerprint ban";
   // Browsers cannot expose a MAC address. A salted device fingerprint hash is the industry substitute.
   const fingerprintHash = createHash("sha256").update(`${body.fingerprint ?? "unknown"}:${process.env.ADMIN_SESSION_SECRET ?? "dev"}`).digest("hex");
-  const moderationCase = { id: randomUUID(), reporterId: body.reporterId, targetId: body.targetId, reason: String(body.reason ?? "unspecified").slice(0, 500), evidence: { audioClip: "data:audio/wav;base64,UklGRg==", chat: store.chat.filter((entry) => entry.characterId === body.targetId).slice(-10).map((entry) => entry.message), fingerprintHash }, status: "pending" as const, flagNumber, penalty, appealNotes: "", createdAt: clock.now() };
+  const moderationCase = { id: randomUUID(), reporterId: body.reporterId, targetId: body.targetId, reason: String(body.reason ?? "unspecified").slice(0, 500), evidence: { audioClip: "data:audio/wav;base64,UklGRg==", chat: store.chat.filter((entry) => entry.characterId === body.targetId).slice(-10).map((entry) => entry.message), fingerprintHash }, status: "pending" as const, flagNumber, penalty: "No penalty pending review", appealNotes: "", createdAt: clock.now() };
   store.moderationCases.push(moderationCase);
-  store.bans.set(body.targetId, { until: flagNumber === 3 ? null : new Date(Date.now() + (flagNumber === 1 ? 3_600_000 : 86_400_000)).toISOString(), kind: penalty });
+
   return reply.code(201).send(moderationCase);
 });
 
@@ -207,21 +244,15 @@ app.post<{ Params: { id: string } }>("/api/admin/moderation/:id", async (request
   const moderationCase = store.moderationCases.find((item) => item.id === request.params.id);
   if (!moderationCase) return reply.code(404).send({ error: "case_not_found" });
   const body = request.body as { decision?: "upheld" | "overturned"; appealNotes?: string };
-  moderationCase.status = body.decision ?? "upheld";
+  if (!["upheld", "overturned"].includes(body.decision ?? "")) return reply.code(400).send({ error: "decision_required" });
+  if (moderationCase.status !== "pending") return reply.code(409).send({ error: "case_already_decided" });
+  moderationCase.status = body.decision!;
   moderationCase.appealNotes = body.appealNotes?.slice(0, 1000) ?? "";
-  if (moderationCase.status === "overturned") {
-    store.bans.delete(moderationCase.targetId);
-    const target = store.characters.get(moderationCase.targetId);
-    if (target) {
-      target.grit += 5;
-      target.actionLog.unshift({ at: clock.now(), action: "flag_overturned", detail: "The flag was overturned. Five GRIT restored for lost play time." });
-    }
-    store.moderationCases.push({
-      id: randomUUID(), reporterId: moderationCase.targetId, targetId: moderationCase.reporterId,
-      reason: "False-report review triggered by an overturned flag.",
-      evidence: { audioClip: "data:audio/wav;base64,UklGRg==", chat: [], fingerprintHash: moderationCase.evidence.fingerprintHash },
-      status: "pending", flagNumber: 1, penalty: "false-report warning and reporter review", appealNotes: "", createdAt: clock.now(),
-    });
+  if (body.decision === "upheld") {
+    const strikes = store.moderationCases.filter(c => c.targetId === moderationCase.targetId && c.status === "upheld").length;
+    moderationCase.flagNumber = strikes;
+    moderationCase.penalty = strikes === 1 ? "communications" : "game";
+    store.bans.set(moderationCase.targetId, { kind: moderationCase.penalty, until: strikes >= 3 ? null : new Date(Date.now() + (strikes === 1 ? 3600000 : 86400000)).toISOString() });
   }
   return moderationCase;
 });
@@ -250,19 +281,23 @@ app.post<{ Params: { scene: string } }>("/api/demo/:scene", async (request, repl
   if (scene === "army" || scene === "honor") { character.act = 2; character.location = "Fort Halvern Annex"; character.activeObjective = "The Score: complete the aptitude assessment."; }
   if (scene === "reveal") { character.act = 3; character.tapes = Array.from({ length: 24 }, (_, index) => `tape-${String(index + 1).padStart(2, "0")}`); }
   if (scene === "honor") character.status = "dead";
+  grantOwner(character.id, reply);
   return reply.code(201).send(character);
 });
 
-const ticker = setInterval(() => sim.tick(), 250);
-app.addHook("onClose", async () => clearInterval(ticker));
+const ticker = setInterval(() => { sim.tick(); }, 250);
+const saver = setInterval(checkpoint, 5000);
+app.addHook("onClose", async () => { clearInterval(ticker); clearInterval(saver); checkpoint(); });
 
 function agentCharacter(authorization?: string, direct?: string) {
   const token = direct ?? authorization?.replace(/^Bearer\s+/i, "");
-  return store.getByToken(token);
+  const character = store.getByToken(token);
+  const ban = character && store.bans.get(character.id);
+  return ban && ban.kind === "game" && (!ban.until || Date.parse(ban.until) > Date.now()) ? undefined : character;
 }
 
 function publicCharacter(character: ReturnType<MemoryStore["createCharacter"]>) {
-  const { agentToken: _, lastSafeCheckpoint: __, ...publicState } = character;
+  const { agentToken: _, lastSafeCheckpoint: __, planNotes: ___, ...publicState } = character;
   return publicState;
 }
 
@@ -273,6 +308,6 @@ function safeEqual(left: string, right: string) {
 }
 
 const port = Number(process.env.PORT ?? 3000);
-await app.listen({ port, host: "0.0.0.0" });
+if (process.env.NODE_ENV !== "test") await app.listen({ port, host: "0.0.0.0" });
 
 export { app, store, clock, sim };

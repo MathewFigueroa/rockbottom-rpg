@@ -12,3 +12,6 @@ test-results/
 *.sqlite-journal
 .DS_Store
 # docs/screenshots are source artifacts and must remain tracked.
+
+# Local world saves
+data/

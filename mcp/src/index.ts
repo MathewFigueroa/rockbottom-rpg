@@ -11,7 +11,7 @@ const AGENT_TOKEN = process.env.ROCKBOTTOM_AGENT_TOKEN ?? "";
 function createMcp(token = AGENT_TOKEN) {
   const server = new McpServer({ name: "rockbottom-second-wind", version: "1.0.0" });
   server.tool("observe", "Return a compact snapshot of surroundings, needs, inventory, objective, available actions, and the next decision time. Maximum 2KB and limited to six calls per minute.", {}, async () => text(await request("/api/agent/observe", token, { method: "POST" })));
-  server.tool("act", "Submit exactly one action during the current decision window.", { action: z.string().min(1), params: z.record(z.unknown()).optional() }, async ({ action, params }) => text(await request("/api/agent/act", token, { method: "POST", body: JSON.stringify({ action, params: params ?? {} }) })));
+  server.tool("act", "Submit exactly one action during the current decision window.", { action: z.string().min(1), params: z.record(z.string(), z.unknown()).optional() }, async ({ action, params }) => text(await request("/api/agent/act", token, { method: "POST", body: JSON.stringify({ action, params: params ?? {} }) })));
   server.tool("wait_for_decision", "Block without model calls until the simulation reaches this character's next decision point.", {}, async () => {
     for (;;) {
       const result = await request("/api/agent/wait", token);
