@@ -4,7 +4,7 @@ An AI-native civic-noir RPG. Give a model a character and a viewer brief, then w
 
 You wake beneath Route 9 with four dollars, a creased photograph of your child, and no indoor bed. Recovery means food, work, housing and showing up. Later, two evacuation lists pull you into an inquiry where every witness protected someone—and left something out.
 
-**Review build:** the playable campaign and follow-up systems are on stacked, unmerged PRs. Nothing has been deployed by this work. To run this version, use the review branch below; `main` does not yet contain the stack. See [release status](docs/RELEASE_STATUS.md) for scope and public-hosting boundaries.
+**Current build:** the playable campaign and follow-up systems from PRs #1–#10 are merged into `main`. No public deployment has been performed by this work. See [release status](docs/RELEASE_STATUS.md) for supported features and public-hosting boundaries.
 
 ![ROCKBOTTOM title screen](docs/screenshots/01-title.png)
 
@@ -24,7 +24,7 @@ Seeds vary encounter order and conditions; model choices vary the trajectory. Di
 Requires Node.js 22+, Corepack and pnpm 11.13.1.
 
 ```bash
-git clone --branch codex/current-readme https://github.com/MathewFigueroa/rockbottom-rpg.git
+git clone https://github.com/MathewFigueroa/rockbottom-rpg.git
 cd rockbottom-rpg
 corepack enable
 corepack prepare pnpm@11.13.1 --activate
@@ -161,7 +161,7 @@ CI checks types, unit/integration tests, browser flows, production dependency au
 | [PostgreSQL](docs/POSTGRES.md) | Migrations, file imports, backups and restore |
 | [Remaining work](TODO.md) | Public-release checks and future expansions |
 
-Review in order: [#1](https://github.com/MathewFigueroa/rockbottom-rpg/pull/1) → [#2](https://github.com/MathewFigueroa/rockbottom-rpg/pull/2) → [#3](https://github.com/MathewFigueroa/rockbottom-rpg/pull/3) → [#4](https://github.com/MathewFigueroa/rockbottom-rpg/pull/4) → [#5](https://github.com/MathewFigueroa/rockbottom-rpg/pull/5) → [#6](https://github.com/MathewFigueroa/rockbottom-rpg/pull/6) → [#7](https://github.com/MathewFigueroa/rockbottom-rpg/pull/7) → [#8](https://github.com/MathewFigueroa/rockbottom-rpg/pull/8) → [#9](https://github.com/MathewFigueroa/rockbottom-rpg/pull/9), then the README follow-up on this branch. All remain unmerged pending approval.
+Merged implementation history, in order: [#1](https://github.com/MathewFigueroa/rockbottom-rpg/pull/1) → [#2](https://github.com/MathewFigueroa/rockbottom-rpg/pull/2) → [#3](https://github.com/MathewFigueroa/rockbottom-rpg/pull/3) → [#4](https://github.com/MathewFigueroa/rockbottom-rpg/pull/4) → [#5](https://github.com/MathewFigueroa/rockbottom-rpg/pull/5) → [#6](https://github.com/MathewFigueroa/rockbottom-rpg/pull/6) → [#7](https://github.com/MathewFigueroa/rockbottom-rpg/pull/7) → [#8](https://github.com/MathewFigueroa/rockbottom-rpg/pull/8) → [#9](https://github.com/MathewFigueroa/rockbottom-rpg/pull/9) → [#10](https://github.com/MathewFigueroa/rockbottom-rpg/pull/10). These milestones are now on `main`.
 
 ## License
 

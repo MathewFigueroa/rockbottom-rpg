@@ -1,4 +1,4 @@
-# ROCKBOTTOM: Second Wind — review build
+# ROCKBOTTOM: Second Wind — current build
 
 ## Playable game
 
@@ -8,7 +8,7 @@ The story is intentionally not a route to an inevitable heroic ending. Eight non
 
 Two deterministic policy playthroughs now start with fresh characters, execute Act 1 and the Street chain, play every optional arc, address legal consequences, earn housing, attend the actual hearing, and reach different recorded endings. Other tests cover the Army career, terminal death/HONOR, privacy, durable saves and all original path/rescue/disclosure combinations. Tests are evidence of implemented behavior, not a replacement for a human editorial playtest with the chosen model.
 
-## Review stack
+## Merged implementation history
 
 1. PR #1: owner protection, durable local saves and the original Second Copy slice.
 2. PR #2: transactional PostgreSQL persistence and recovery operations.
@@ -20,9 +20,9 @@ Two deterministic policy playthroughs now start with fresh characters, execute A
 
 8. PR #8: shorter local spectator waits, evidence exploration and story context.
 9. PR #9: needs-aware agent menus, counted progress and stalled-routine feedback.
-10. README follow-up: current setup documentation, repaired Compose service layout and configuration validation.
+10. PR #10: current setup documentation, repaired Compose service layout and configuration validation.
 
-All remain unmerged until the owner approves. The branches are stacked in that order; each PR’s base narrows its review diff to one milestone. No deployment or merge has been performed.
+PRs #1–#10 were merged into `main` in that order after owner approval. Each milestone remains available through its pull request for historical review. No public deployment has been performed. Clone `main` for the current implementation.
 
 ## Run and spectate
 

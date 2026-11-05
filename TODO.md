@@ -1,11 +1,11 @@
 # Release follow-ups
 
-The original audit backlog has been substantially implemented in the stacked review branches. Read [release status](docs/RELEASE_STATUS.md) first; [the story director](docs/LIVING_STORY.md), [Army service](docs/ARMY_SERVICE.md), [street/legal systems](docs/STREETS_AND_LAW.md) and [PostgreSQL](docs/POSTGRES.md) describe what is executable now.
+The original audit backlog has been substantially implemented in the merged milestones on `main`. Read [release status](docs/RELEASE_STATUS.md) first; [the story director](docs/LIVING_STORY.md), [Army service](docs/ARMY_SERVICE.md), [street/legal systems](docs/STREETS_AND_LAW.md) and [PostgreSQL](docs/POSTGRES.md) describe what is executable now.
 
 ## Before a public release
 
 - Human editorial playtests with the selected models: tone, pacing, interpretation quality and real provider compatibility. Automated tests use a stub model endpoint and never claim to evaluate every model's prose.
-- Operator review of secrets, TLS, backups, data retention, incident response and account recovery practices. The release stack is unmerged and undeployed.
+- Operator review of secrets, TLS, backups, data retention, incident response and account recovery practices. The release stack is merged into `main`; public deployment remains a separate operator decision.
 - Enable required CI checks through repository branch rules after review; a workflow alone does not enforce branch protection.
 - Benchmark snapshot write amplification and real concurrent player/model load before raising shard capacity. This remains one authoritative simulation process.
 
