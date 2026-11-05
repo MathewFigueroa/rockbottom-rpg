@@ -1,3 +1,4 @@
+import { armyAction, settleArmy } from "./army.js";
 import { randomBytes } from "node:crypto";
 import { advanceQuest, campaignView } from "./campaign.js";
 import { advanceStory, choices } from "./story.js";
@@ -29,8 +30,13 @@ export class Simulation {
     if (character.status === "dead" && action !== "quest_choice") return { ok: false, message: "This life has ended.", state: character };
     if (!ACTIONS.includes(action as GameAction)) return this.fail(character, action, "Unknown action.");
     const now = this.clock.nowMs();
+    const seed = () => this.store.runtime(character.id).randomSeed ??= randomBytes(32).toString('hex');
+    this.store.cashFaucets += settleArmy(character, now, seed());
+    if (character.status === 'dead' && action !== 'quest_choice') return { ok: false, message: 'This life has ended.', state: character };
+    if (character.army?.deployed) return { ok: false, message: 'The rotation resolves at the scheduled return.', retry_at: character.army.deployed.due, state: character };
+    const microInput = action === 'army_action' && ['answer', 'finish-assessment', 'input'].includes(String(params.op));
     const availableAt = new Date(character.nextDecisionAt).getTime();
-    if (now < availableAt) {
+    if (now < availableAt && !microInput) {
       return { ok: false, message: "The simulation is between decision points.", retry_at: character.nextDecisionAt, state: character };
     }
     if (agent && character.actedWindow === character.decisionWindow) character.decisionWindow += 1;
@@ -38,7 +44,13 @@ export class Simulation {
     const previousCash = character.cash;
     let durationMinutes = 1;
     let message = "Done.";
+    let instant = false;
     switch (action as GameAction) {
+      case 'army_action': {
+        const result = armyAction(character, params, now);
+        if (!result.ok) return this.fail(character, action, result.message);
+        message = result.message; durationMinutes = result.minutes; instant = !!result.instant; break;
+      }
       case "quest_choice": {
         const result = advanceQuest(character, params, this.clock.now(), () => {
           const runtime = this.store.runtime(character.id);
@@ -157,7 +169,7 @@ export class Simulation {
     }
     const spacingGameMs = this.clock.read().decisionSpacingSeconds * 1000;
     const durationGameMs = durationMinutes * 60_000;
-    const nextGameMs = now + Math.max(spacingGameMs, durationGameMs);
+    const nextGameMs = instant ? now : now + Math.max(spacingGameMs, durationGameMs);
     character.nextDecisionAt = new Date(nextGameMs).toISOString();
     if (character.status !== "dead") character.status = durationMinutes >= 400 ? action === "sleep_shelter" ? "sleeping" : "working" : durationMinutes > 5 ? "traveling" : "active";
     character.actionLog.unshift({ at: this.clock.now(), action, detail: message });
@@ -173,7 +185,7 @@ export class Simulation {
     runtime.observedAt = runtime.observedAt.filter((time) => now - time < 60_000);
     if (runtime.observedAt.length >= 6) return { ok: false, error: "observe_rate_limited", retry_at: new Date(runtime.observedAt[0]! + 60_000).toISOString() };
     runtime.observedAt.push(now);
-    const available = ACTIONS.map((name) => ({ name, params: name === "travel" ? { destination: "string" } : name === "story_decision" ? { choice: choices(character).join("|") } : name === "quest_choice" ? { quest: "get_story_state", choice: "option_id", confirmPermanentDeath: "boolean" } : {} }));
+    const available = ACTIONS.map((name) => ({ name, params: name === "travel" ? { destination: "string" } : name === "story_decision" ? { choice: choices(character).join("|") } : name === "army_action" ? { op: "get_story_state" } : name === "quest_choice" ? { quest: "get_story_state", choice: "option_id", confirmPermanentDeath: "boolean" } : {} }));
     return {
       ok: true,
       character: { id: character.id, name: character.name, mode: character.mode, status: character.status },
@@ -195,10 +207,12 @@ export class Simulation {
     const now = this.clock.nowMs();
     const config = this.clock.read();
     for (const character of this.store.characters.values()) {
-      if (character.status === "dead") continue;
+      this.store.cashFaucets += settleArmy(character, now, this.store.runtime(character.id).randomSeed ??= randomBytes(32).toString('hex'));
+      if (character.status === "dead" || character.campaign?.perspective === 'adult-child' || character.army?.deployed || character.army?.phase === 'assessment' || character.army?.drill) continue;
       const runtime = this.store.runtime(character.id);
       if (character.status === "stuck" && runtime.stuckSince && now - runtime.stuckSince >= config.stuckResetMinutes * 60_000) {
-        Object.assign(character, character.lastSafeCheckpoint ?? {});
+        // Recovery moves the actor; it must never roll back wages, evidence or quest state.
+        if (character.lastSafeCheckpoint?.location) character.location = character.lastSafeCheckpoint.location;
         character.status = "active";
         character.actionLog.unshift({ at: this.clock.now(), action: "checkpoint_reset", detail: "Returned to the last safe checkpoint." });
         runtime.stuckSince = null;

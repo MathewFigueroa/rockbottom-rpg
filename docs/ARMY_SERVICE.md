@@ -1,0 +1,17 @@
+# Full training and recurring service
+
+Stacked on the Acts 2–3 campaign PR. The earlier short logistics orientation remains compatible; the **Life** panel now opens the full service career for Army-path characters. All commands are available to connected agents through `get_story_state` and `act` with `army_action`.
+
+The twelve-question battery has a three-game-minute deadline. Questions are answered individually; the server holds the answer key and computes E-1/E-2/E-3/E-4 at 0–5 / 6–8 / 9–10 / 11–12 correct. Unanswered questions count as incorrect. Timed answer/input commands are the only micro-inputs exempt from the normal action wait. They cannot submit arbitrary progress or rewards.
+
+Three training days require five ordered inputs within eighteen game seconds per drill. Discipline provides limited recovery for a mistake. Failed/expired drills schedule rest; completed drills require a full game day before another. Assessment and drill expiration are settled by the server ticker. Agents should use the current question/sequence in Life state rather than infer completed inputs.
+
+Graduation starts a sixty-day term. Weekly gross pay is 400/480/560/640 fictional dollars by rank. The term’s 10%, 20% or 28% child-support allotment locks at the first payday. Each paycheck advances its own persisted due time; retrying, restarting or skipping time cannot duplicate it. Support and net cash are accounted separately. Pay stops at the term boundary; terminal leave offers an SRO voucher and discharge or another term at 1.35x pay and 1.2x deployment base risk. Re-enlistment resets the term payment schedule, not cumulative earnings or casualty history.
+
+Offers recur fourteen to twenty-one days after a return and last three to five days. A time-limited offer can be declined or accepted solo/with surviving squadmates, with cover/driver/cargo tactics. Final fatal risk is displayed for each exact option and requires explicit consent. Discipline and squad size reduce base risk; tactics impose visible tradeoffs. No client-supplied odds, seed or squad size is used.
+
+Departure persists a scheduled return without revealing the outcome. At that time the private seed resolves player and squad casualties, gross bonus, support, absence and narrative events exactly once. Death prevents later wages and parent actions; Petty/Dominguez losses persist across terms. Surviving repeated rotations can promote rank, capped at E-4. The family-court hearing can proceed during service, but the living parent’s archive waits for discharge.
+
+All service state, pending jobs and private randomness survive the file and PostgreSQL adapters. The simulation clock pauses across process downtime; catch-up means missed game-clock checkpoints, not unobserved real-world days. Assessment/training are game-time timed, so a faster shard clock makes the real-time input window shorter. Existing quest deployments remain the initial orientation scenario, distinct from recurring career rotations.
+
+Tests cover the complete assessment and three-day training loop, late/invalid inputs, once-only weekly transfers, term boundaries, discharge/voucher, saved service state, explicit deployment consent, delayed outcome, replay prevention and re-enlistment schedules. This models a fictional service career, not real military pay or procedure.

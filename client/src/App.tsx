@@ -77,7 +77,7 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [visitationOpen, setVisitationOpen] = useState(false);
-  const [campaignPanel, setCampaignPanel] = useState<"story" | "quests">("story");
+  const [campaignPanel, setCampaignPanel] = useState<"story" | "quests" | "life">("story");
   const load = useCallback(async () => {
     if (!characterId) return;
     try { setCharacter(await api.character(characterId)); } catch (reason) { setError(reason instanceof Error ? reason.message : "Character unavailable"); }
@@ -87,7 +87,7 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
     if (!character || busy) return;
     if (action === "attend_visitation" && !force) { setVisitationOpen(true); return; }
     setBusy(true);
-    try { const result = await api.action(character.id, action, params); const updated = await api.character(character.id); setCharacter(updated); setCampaignPanel(updated.storyChoices?.length ? "story" : "quests"); setMessage(["story_decision", "quest_choice"].includes(action) ? "" : result.message); } catch (reason) { setMessage(reason instanceof Error ? reason.message : "Action failed"); } finally { setBusy(false); }
+    try { const result = await api.action(character.id, action, params); const updated = await api.character(character.id); setCharacter(updated); setCampaignPanel(action === "army_action" ? "life" : updated.storyChoices?.length ? "story" : "quests"); setMessage(["story_decision", "quest_choice", "army_action"].includes(action) ? "" : result.message); } catch (reason) { setMessage(reason instanceof Error ? reason.message : "Action failed"); } finally { setBusy(false); }
   };
   const setMode = async (mode: ControlMode) => { if (!character) return; setCharacter(await api.mode(character.id, mode)); };
   if (error) return <main className="fatal"><h1>Halvern is out of reach</h1><p>{error}</p><button onClick={onExit}>Return to title</button></main>;
@@ -112,9 +112,10 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
       <aside className="objective-panel"><div className="objective-number">{String(character.questStep + 1).padStart(2, "0")}</div><div><small>ACT {character.act}: {character.act === 1 ? "THE FLOOR" : character.act === 2 ? "THE LADDER" : "THE FRAME"}</small><strong>{character.activeObjective}</strong></div></aside>
       <div className="location-pip"><span>⌖</span>{character.location}</div>
       {message && <button className="toast" onClick={() => setMessage("")}>{message}</button>}
-      {character.act >= 2 && <nav className="campaign-tabs" aria-label="Campaign view"><button onClick={() => setCampaignPanel("story")} aria-pressed={campaignPanel === "story"}>Story</button><button onClick={() => setCampaignPanel("quests")} aria-pressed={campaignPanel === "quests"}>Quests</button></nav>}
+      {character.act >= 2 && <nav className="campaign-tabs" aria-label="Campaign view"><button onClick={() => setCampaignPanel("story")} aria-pressed={campaignPanel === "story"}>Story</button><button onClick={() => setCampaignPanel("quests")} aria-pressed={campaignPanel === "quests"}>Quests</button><button onClick={() => setCampaignPanel("life")} aria-pressed={campaignPanel === "life"}>Life</button></nav>}
       {character.act >= 2 && campaignPanel === "story" && <section className="dialogue-panel story-dialogue" aria-label="Second Wind story"><div><small>{character.story?.events.at(-1)?.timeline ?? 'THE SECOND COPY'}</small><p>{character.story?.events.at(-1)?.text ?? 'A clerk has a question about your signature. Open the record.'}</p><p>{STORY_PROMPTS[character.story?.stage ?? 0]}</p><div className="choice-list">{(character.storyChoices ?? []).map(choice => <button key={choice} disabled={busy} onClick={() => void act('story_decision', { choice })}>{choice.replaceAll('_', ' ')}</button>)}</div></div></section>}
       {character.act >= 2 && campaignPanel === "quests" && <QuestJournal character={character} busy={busy} act={act} />}
+      {character.act >= 2 && campaignPanel === "life" && <LifePanel character={character} busy={busy} act={act} />}
       <ActionDock character={character} busy={busy} act={act} />
       <TouchControls onAction={() => void act(recommendedAction(character))} />
       {effectiveScene === "opening" && <OpeningPanel character={character} onClose={() => setMessage("The cart waits east of the pillar.")} />}
@@ -130,6 +131,16 @@ function GameShell({ characterId, scene, onExit }: { characterId: string; scene:
       {pause && <PausePanel character={character} onClose={() => setPause(false)} onMode={setMode} onExit={onExit} />}
     </main>
   );
+}
+
+function LifePanel({ character, busy, act }: { character: CharacterState; busy: boolean; act: (action: string, params?: Record<string, unknown>) => Promise<void> }) {
+  const [consent, setConsent] = useState(false);
+  const view = character.lifeView;
+  return <aside className="quest-journal" aria-label="Life decisions"><h2>{view?.title ?? 'Life in Halvern'}</h2>{view?.summary.map((line, i) => <p key={i}>{line}</p>)}
+    {view?.commands.some(c => c.consent) && <label><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />I accept the displayed risk of permanent death for this deployment.</label>}
+    {view?.commands.map((command, i) => <button key={`${command.label}-${i}`} disabled={busy || !!command.blocked || (!!command.consent && !consent)} title={command.blocked} onClick={() => { setConsent(false); void act(command.action, { ...command.params, confirmPermanentDeath: consent }); }}>{command.label}{command.blocked ? ` · ${command.blocked}` : ''}</button>)}
+    <details><summary>What happened</summary>{character.chronicle?.slice(-8).map(e => <p key={e.id}>{e.text}</p>)}</details>
+  </aside>;
 }
 
 function QuestJournal({ character, busy, act }: { character: CharacterState; busy: boolean; act: (action: string, params?: Record<string, unknown>) => Promise<void> }) {
