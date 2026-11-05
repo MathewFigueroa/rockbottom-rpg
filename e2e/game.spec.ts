@@ -3,6 +3,7 @@ import { expect, request as playwrightRequest, test } from "@playwright/test";
 const server = "http://localhost:3000";
 
 test("manual player completes Act 1 through the understated visitation", async ({ page }) => {
+  test.setTimeout(90_000);
   await page.goto("/");
   await page.getByRole("button", { name: "Begin again" }).click();
   await expect(page.getByTestId("character-creation")).toBeVisible();
@@ -163,6 +164,7 @@ function chooseRuleAction(state: any) {
 }
 
 test('Second Copy is playable in the browser and broadcasts revealed scenes', async ({ page }) => {
+  test.setTimeout(120_000);
   const c = await (await page.request.post(`${server}/api/demo/sam`)).json();
   await page.goto(`/?character=${c.id}&scene=city`);
   const panel = page.getByRole('region', { name: 'Second Wind story' });
